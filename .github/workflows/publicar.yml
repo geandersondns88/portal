@@ -1,0 +1,51 @@
+name: Publicar portal no Firebase Hosting
+
+# Publica a página do portal (pasta web/) no Firebase Hosting, manualmente ou quando web/ mudar na main.
+# Precisa do segredo FIREBASE_SERVICE_ACCOUNT (JSON da conta de serviço com papel "Firebase Hosting Admin" do projeto escolhido).
+# O site de Hosting vem do campo "site" ao rodar manualmente ou da variável FIREBASE_HOSTING_SITE; o projeto, do campo "projeto"
+# ou da variável FIREBASE_PROJECT_ID (padrão frotus88). Veja README.md.
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Id do site de Hosting do portal (ex.: frotus88-portal)'
+        required: false
+      projeto:
+        description: 'Projeto Firebase (padrão: frotus88)'
+        required: false
+  push:
+    branches: [main]
+    paths: ['web/**']
+
+concurrency:
+  group: publicar-portal
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT: ${{ inputs.projeto || vars.FIREBASE_PROJECT_ID || 'frotus88' }}
+      FIREBASE_SITE: ${{ inputs.site || vars.FIREBASE_HOSTING_SITE }}
+      FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Conferir configuração
+        run: |
+          if [ -z "$FIREBASE_SA" ]; then echo "::error::Falta o segredo FIREBASE_SERVICE_ACCOUNT."; exit 1; fi
+          if [ -z "$FIREBASE_SITE" ]; then echo "::error::Informe o site (campo site ou variável FIREBASE_HOSTING_SITE)."; exit 1; fi
+      - name: Publicar
+        run: |
+          cat > firebase.json <<JSON
+          { "hosting": { "site": "$FIREBASE_SITE", "public": "web", "headers": [ { "source": "**", "headers": [ { "key": "X-Robots-Tag", "value": "noindex, nofollow" }, { "key": "X-Content-Type-Options", "value": "nosniff" }, { "key": "Referrer-Policy", "value": "no-referrer" } ] } ] } }
+          JSON
+          printf '%s' "$FIREBASE_SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          npx --yes firebase-tools@13.29.1 deploy --only hosting --project "$FIREBASE_PROJECT" --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"

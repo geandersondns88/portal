@@ -1,0 +1,7 @@
+project_id = "vzoyugnoywtgnvabatrw"
+
+[functions.chamar-sistema]
+verify_jwt = true
+
+[functions.config-mercadopago]
+verify_jwt = true

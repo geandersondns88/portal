@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Portal de assinaturas</title>
+<style>
+  :root { --fundo:#f6f7f9; --card:#fff; --texto:#15202b; --suave:#5b6b7b; --borda:#d9dee5; --destaque:#0b6e99; --ok:#137a3f; --erro:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --fundo:#0e1419; --card:#161e26; --texto:#e8edf2; --suave:#93a3b3; --borda:#2a3643; --destaque:#4cb3d9; --ok:#4cc27d; --erro:#ff8a80; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--fundo); color:var(--texto); font:16px/1.45 system-ui, sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+  h1 { font-size:1.3rem; margin:8px 0 0; } h2 { font-size:1.05rem; margin:0 0 4px; }
+  .card { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:16px; display:grid; gap:12px; }
+  label { display:grid; gap:4px; font-size:.9rem; color:var(--suave); }
+  input, select, button { font:inherit; padding:9px 11px; border-radius:8px; border:1px solid var(--borda); background:var(--card); color:var(--texto); }
+  button { cursor:pointer; background:var(--destaque); border-color:var(--destaque); color:#fff; font-weight:600; }
+  button.sec { background:transparent; color:var(--texto); border-color:var(--borda); }
+  button:disabled { opacity:.6; cursor:wait; }
+  .linha { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .dica { font-size:.82rem; color:var(--suave); margin:0; }
+  .msg { padding:9px 11px; border-radius:8px; border:1px solid var(--borda); font-size:.92rem; }
+  .msg.ok { color:var(--ok); border-color:var(--ok); } .msg.erro { color:var(--erro); border-color:var(--erro); }
+  .oculto { display:none !important; }
+  .topo { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="topo"><h1>Portal de assinaturas</h1><button id="sair" class="sec oculto">Sair</button></div>
+
+  <section id="entrar" class="card">
+    <h2>Entrar</h2>
+    <form id="form-entrar" class="card" style="border:0;padding:0">
+      <label>E-mail <input id="email" type="email" autocomplete="username" required></label>
+      <label>Senha <input id="senha" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Entrar</button>
+    </form>
+    <div id="msg-entrar" class="msg erro oculto" role="alert"></div>
+  </section>
+
+  <div id="painel" class="oculto" style="display:grid;gap:16px">
+    <section class="card">
+      <h2>Sistemas conectados</h2>
+      <p class="dica">Testa se o portal consegue falar com cada sistema (usa a chave guardada no servidor do portal).</p>
+      <div id="sistemas" class="card" style="border:0;padding:0"></div>
+    </section>
+
+    <section class="card">
+      <h2>Mercado Pago</h2>
+      <p class="dica">Os dados ficam guardados no servidor do portal. O access token e o segredo do webhook nunca voltam para esta tela: só os 4 últimos caracteres aparecem. Deixe em branco para manter o que já está guardado.</p>
+      <form id="form-mp" class="card" style="border:0;padding:0">
+        <label>Ambiente
+          <select id="mp-ambiente"><option value="teste">Teste</option><option value="producao">Produção</option></select>
+        </label>
+        <label>Public key <input id="mp-public" autocomplete="off" placeholder="APP_USR-… ou TEST-…"></label>
+        <label>Access token <input id="mp-token" type="password" autocomplete="off" placeholder="APP_USR-… ou TEST-…"><span id="mp-token-final" class="dica"></span></label>
+        <label>Segredo do webhook (assinatura secreta) <input id="mp-segredo" type="password" autocomplete="off"><span id="mp-segredo-final" class="dica"></span></label>
+        <label>URL de notificação (webhook) <input id="mp-url" type="url" autocomplete="off" placeholder="https://…"></label>
+        <div class="linha">
+          <button type="submit" id="mp-salvar">Salvar</button>
+          <button type="button" id="mp-testar" class="sec">Testar credenciais</button>
+        </div>
+      </form>
+      <div id="msg-mp" class="msg oculto" role="status"></div>
+      <p id="mp-quando" class="dica"></p>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+  // Projeto "Portal". A chave publicável é pública por natureza; quem protege os dados é o login + a lista de administradores no servidor.
+  const URL_PORTAL = 'https://vzoyugnoywtgnvabatrw.supabase.co'
+  const CHAVE_PUBLICA = 'sb_publishable_OU8JICbHiBK3FT-7cLb5Vg_k2bdT1C1'
+  const SISTEMAS = [{ codigo: 'transporte', nome: 'Transporte' }]   // acrescente aqui os próximos sistemas (e cadastre-os na tabela `sistemas`)
+  const banco = supabase.createClient(URL_PORTAL, CHAVE_PUBLICA)
+  const $ = (id) => document.getElementById(id)
+
+  function aviso(el, texto, tipo) { el.textContent = texto; el.className = 'msg ' + (tipo || ''); }
+  function esconder(el) { el.classList.add('oculto') }
+
+  async function chamar(funcao, corpo) {
+    const { data, error } = await banco.functions.invoke(funcao, { body: corpo })
+    if (error) {
+      let texto = 'Algo deu errado. Tente novamente.'
+      try { const j = await error.context.json(); if (j && j.erro) texto = j.erro } catch (_) {}
+      throw new Error(texto)
+    }
+    return data
+  }
+
+  function mostrarPainel(logado) {
+    $('entrar').classList.toggle('oculto', logado)
+    $('painel').classList.toggle('oculto', !logado)
+    $('sair').classList.toggle('oculto', !logado)
+  }
+
+  function desenharSistemas() {
+    const caixa = $('sistemas'); caixa.replaceChildren()
+    for (const s of SISTEMAS) {
+      const linha = document.createElement('div'); linha.className = 'linha'
+      const nome = document.createElement('strong'); nome.textContent = s.nome
+      const botao = document.createElement('button'); botao.className = 'sec'; botao.textContent = 'Testar conexão'
+      const resultado = document.createElement('span'); resultado.className = 'dica'
+      botao.onclick = async () => {
+        botao.disabled = true; resultado.textContent = 'Testando…'
+        try {
+          const r = await chamar('chamar-sistema', { sistema: s.codigo, acao: 'testar' })
+          resultado.textContent = r.ok ? `Conectado (${r.milissegundos} ms, ${r.total} empresa(s)).` : `Falhou: ${r.erro}`
+          resultado.style.color = r.ok ? 'var(--ok)' : 'var(--erro)'
+        } catch (e) { resultado.textContent = 'Falhou: ' + e.message; resultado.style.color = 'var(--erro)' }
+        botao.disabled = false
+      }
+      linha.append(nome, botao, resultado); caixa.append(linha)
+    }
+  }
+
+  function preencherMp(c) {
+    $('mp-ambiente').value = c.ambiente
+    $('mp-public').value = c.public_key || ''
+    $('mp-url').value = c.url_notificacao || ''
+    $('mp-token').value = ''; $('mp-segredo').value = ''
+    $('mp-token-final').textContent = c.access_token_final ? 'Guardado: ' + c.access_token_final : 'Nada guardado.'
+    $('mp-segredo-final').textContent = c.webhook_secret_final ? 'Guardado: ' + c.webhook_secret_final : 'Nada guardado.'
+    $('mp-quando').textContent = c.atualizado_em ? 'Última alteração: ' + new Date(c.atualizado_em).toLocaleString('pt-BR') : ''
+  }
+
+  async function carregar() {
+    desenharSistemas()
+    try { preencherMp((await chamar('config-mercadopago', { acao: 'ler' })).config) }
+    catch (e) { aviso($('msg-mp'), e.message, 'erro') }
+  }
+
+  $('form-entrar').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); esconder($('msg-entrar'))
+    const { error } = await banco.auth.signInWithPassword({ email: $('email').value.trim(), password: $('senha').value })
+    if (error) { aviso($('msg-entrar'), 'E-mail ou senha incorretos.', 'erro'); return }
+    $('senha').value = ''; mostrarPainel(true); carregar()
+  })
+  $('sair').onclick = async () => { await banco.auth.signOut(); mostrarPainel(false) }
+
+  $('form-mp').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); $('mp-salvar').disabled = true
+    try {
+      const r = await chamar('config-mercadopago', {
+        acao: 'salvar', ambiente: $('mp-ambiente').value, public_key: $('mp-public').value,
+        access_token: $('mp-token').value, webhook_secret: $('mp-segredo').value, url_notificacao: $('mp-url').value,
+      })
+      preencherMp(r.config); aviso($('msg-mp'), 'Configuração salva.', 'ok')
+    } catch (e) { aviso($('msg-mp'), e.message, 'erro') }
+    $('mp-salvar').disabled = false
+  })
+
+  $('mp-testar').onclick = async () => {
+    $('mp-testar').disabled = true; aviso($('msg-mp'), 'Testando…', '')
+    try {
+      const r = await chamar('config-mercadopago', { acao: 'testar' })
+      if (r.ok) aviso($('msg-mp'), `Credenciais aceitas pelo Mercado Pago${r.conta.apelido ? ' (conta ' + r.conta.apelido + ')' : ''}.`, 'ok')
+      else aviso($('msg-mp'), r.erro, 'erro')
+    } catch (e) { aviso($('msg-mp'), e.message, 'erro') }
+    $('mp-testar').disabled = false
+  }
+
+  banco.auth.getSession().then(({ data }) => { if (data.session) { mostrarPainel(true); carregar() } })
+</script>
+</body>
+</html>
