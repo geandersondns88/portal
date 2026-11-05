@@ -52,8 +52,18 @@ export async function registrarEmpresa(banco: SupabaseClient, sistemaId: string,
 
   const procurarCliente = async (): Promise<string | null> => {
     if (!documento) return null
-    const { data, error } = await banco.from('clientes_portal').select('id').eq('documento', documento).maybeSingle()
+    const { data, error } = await banco.from('clientes_portal').select('id, email, telefone').eq('documento', documento).maybeSingle()
     if (error) throw error
+    if (data) {
+      // cliente que já existe: só completa o que estiver vazio (e-mail e telefone), sem sobrescrever o que alguém editou
+      const completar: Record<string, string> = {}
+      if (!data.email && e.email) completar.email = e.email
+      if (!data.telefone && e.telefone) completar.telefone = e.telefone
+      if (Object.keys(completar).length > 0) {
+        const { error: erroAtualizar } = await banco.from('clientes_portal').update(completar).eq('id', data.id)
+        if (erroAtualizar) throw erroAtualizar
+      }
+    }
     return data?.id ?? null
   }
 

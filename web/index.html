@@ -227,6 +227,7 @@
         el('div', { class: 'topo' }, el('strong', {}, e.nome_fantasia || e.nome), selo(e.status)),
         el('div', { class: 'meta' },
           el('span', {}, documentoBr(e.documento)),
+          e.email ? el('span', {}, e.email) : null,
           el('span', {}, 'Plano: ' + nomeDoPlano(planos, e.plano_codigo)),
           e.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(e.trial_ate)) : null,
           el('span', {}, `${e.usuarios} usuário(s) · ${e.veiculos} veículo(s)`),
@@ -268,8 +269,8 @@
       c.replaceChildren(
         el('div', { class: 'linha espaco' }, el('h2', {}, atual.nome_fantasia || atual.nome), el('button', { class: 'sec', onclick: () => dlg.close() }, 'Fechar')),
         el('div', { style: 'display:grid;gap:2px;color:var(--suave);font-size:.9rem' },
-          el('span', {}, atual.nome), el('span', {}, documentoBr(atual.documento)),
-          atual.email ? el('span', {}, atual.email) : null, atual.telefone ? el('span', {}, atual.telefone) : null,
+          el('span', {}, atual.nome), el('span', {}, 'CNPJ/CPF: ' + documentoBr(atual.documento)),
+          el('span', {}, 'E-mail: ' + (atual.email || '—')), el('span', {}, 'Telefone: ' + (atual.telefone || '—')),
           el('span', {}, 'Cliente desde ' + dataBr(atual.criada_em))),
         el('div', { class: 'linha' }, selo(atual.status), el('span', {}, 'Plano: ' + nomeDoPlano(planos, atual.plano_codigo)),
           atual.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(atual.trial_ate)) : null,
@@ -341,22 +342,30 @@
   }
 
   // ----- Planos de assinatura (deste sistema) -----
+  // A lista começa vazia: só aparecem os planos que você criar. O plano interno "trial" (teste grátis dos cadastros novos) e os desativados ficam escondidos
+  // ("Mostrar desativados" os traz de volta).
   async function abaPlanos(codigo, raiz) {
     const caixa = el('div', { class: 'lista' })
+    const desativados = el('input', { type: 'checkbox', 'aria-label': 'Mostrar desativados' })
+    let todos = []
+    function desenhar() {
+      const lista = todos.filter((p) => p.codigo !== 'trial' && (p.ativo || desativados.checked))
+      caixa.replaceChildren(...(lista.length ? lista.map((p) => el('button', { class: 'item', onclick: () => editarPlano(codigo, p, carregar) },
+        el('div', { class: 'topo' }, el('strong', {}, p.nome), el('span', { class: 'selo ' + (p.ativo ? 'ok' : 'neutro') }, p.ativo ? 'Ativo' : 'Desativado')),
+        el('div', { class: 'meta' }, el('span', {}, 'Código: ' + p.codigo), el('span', {}, moeda(p.preco_mensal) + '/mês'),
+          el('span', {}, 'Veículos: ' + (p.max_veiculos == null ? 'ilimitado' : p.max_veiculos)), el('span', {}, 'Usuários: ' + (p.max_usuarios == null ? 'ilimitado' : p.max_usuarios)),
+          el('span', {}, `${p.empresas} empresa(s) usando`)))) : [aviso('Nenhum plano criado ainda. Use "Novo plano" para criar os planos deste sistema.', 'aviso')]))
+    }
     async function carregar() {
       caixa.replaceChildren(aviso('Carregando…'))
-      try {
-        const r = await chamar('chamar-sistema', { sistema: codigo, acao: 'planos_listar' })
-        caixa.replaceChildren(...(r.planos.length ? r.planos.map((p) => el('button', { class: 'item', onclick: () => editarPlano(codigo, p, carregar) },
-          el('div', { class: 'topo' }, el('strong', {}, p.nome), el('span', { class: 'selo ' + (p.ativo ? 'ok' : 'neutro') }, p.ativo ? 'Ativo' : 'Inativo')),
-          el('div', { class: 'meta' }, el('span', {}, 'Código: ' + p.codigo), el('span', {}, moeda(p.preco_mensal) + '/mês'),
-            el('span', {}, 'Veículos: ' + (p.max_veiculos == null ? 'ilimitado' : p.max_veiculos)), el('span', {}, 'Usuários: ' + (p.max_usuarios == null ? 'ilimitado' : p.max_usuarios)),
-            el('span', {}, `${p.empresas} empresa(s) usando`)))) : [aviso('Nenhum plano.', 'aviso')]))
-      } catch (e) { caixa.replaceChildren(aviso(e.message, 'erro')) }
+      try { todos = (await chamar('chamar-sistema', { sistema: codigo, acao: 'planos_listar' })).planos; desenhar() }
+      catch (e) { caixa.replaceChildren(aviso(e.message, 'erro')) }
     }
+    desativados.addEventListener('change', desenhar)
     raiz.replaceChildren(
       el('div', { class: 'linha espaco' }, el('h3', {}, 'Planos de assinatura'), el('button', { onclick: () => editarPlano(codigo, null, carregar) }, 'Novo plano')),
       el('p', { class: 'dica' }, 'Os limites e o preço valem dentro do sistema. Um plano em uso não pode ser desativado: troque o plano dos clientes antes.'),
+      el('label', { class: 'marca' }, desativados, 'Mostrar desativados'),
       caixa)
     await carregar()
   }

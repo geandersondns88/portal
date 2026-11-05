@@ -42,7 +42,7 @@ As telas são **iguais para todos os sistemas**: nada é escrito por sistema na 
 - **Sistemas** (tela principal): uma caixa com ícone por sistema. Ao abrir, o sistema tem três áreas:
   - **Clientes**: lista com situação, plano, fim do teste e uso (busca, filtro, paginação). Ao tocar num cliente: ativar, suspender, cancelar, estender o teste, trocar o plano (lista de planos do sistema) e ver o histórico. "Sincronizar com o portal" recupera cadastros que não tenham chegado.
   - **Status dos serviços**: testa de verdade a comunicação do portal com aquele sistema e mostra as últimas chamadas (atualiza a cada 60 s).
-  - **Planos de assinatura**: criar e editar os planos do sistema (nome, limites, preço, ativo).
+  - **Planos de assinatura**: começa vazio; você cria os planos do sistema (nome, limites, preço, ativo). O plano interno `trial` e os desativados ficam escondidos (há "Mostrar desativados").
 - **Mercado Pago** (tela separada, a mesma para todos): ambiente, public key, access token, segredo e URL do webhook.
 
 Para incluir um sistema novo: cadastre-o em `sistemas` (código, nome, `icone` entre `caminhao`, `onibus`, `loja`, `pessoas`, `calendario` e `app`, URL da API e o nome do segredo `PORTAL_KEY_<SISTEMA>`), crie o segredo e ele aparece sozinho. O sistema precisa seguir o mesmo contrato de API (`docs/api-transporte.md`: listar, eventos, ativar, suspender, cancelar, estender_teste, trocar_plano, planos_listar, plano_salvar) e avisar o portal quando alguém se cadastrar.
