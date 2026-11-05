@@ -3,15 +3,15 @@ name: Publicar portal no Firebase Hosting
 # Publica a página do portal (pasta web/) no Firebase Hosting, manualmente ou quando web/ mudar na main.
 # Precisa do segredo FIREBASE_SERVICE_ACCOUNT (JSON da conta de serviço com papel "Firebase Hosting Admin" do projeto escolhido).
 # O site de Hosting vem do campo "site" ao rodar manualmente ou da variável FIREBASE_HOSTING_SITE; o projeto, do campo "projeto"
-# ou da variável FIREBASE_PROJECT_ID (padrão frotus88). Veja README.md.
+# ou da variável FIREBASE_PROJECT_ID (padrão gdns88; o site padrão também é gdns88). Veja README.md.
 on:
   workflow_dispatch:
     inputs:
       site:
-        description: 'Id do site de Hosting do portal (ex.: frotus88-portal)'
+        description: 'Id do site de Hosting (padrão: gdns88)'
         required: false
       projeto:
-        description: 'Projeto Firebase (padrão: frotus88)'
+        description: 'Projeto Firebase (padrão: gdns88)'
         required: false
   push:
     branches: [main]
@@ -28,8 +28,8 @@ jobs:
   publicar:
     runs-on: ubuntu-latest
     env:
-      FIREBASE_PROJECT: ${{ inputs.projeto || vars.FIREBASE_PROJECT_ID || 'frotus88' }}
-      FIREBASE_SITE: ${{ inputs.site || vars.FIREBASE_HOSTING_SITE }}
+      FIREBASE_PROJECT: ${{ inputs.projeto || vars.FIREBASE_PROJECT_ID || 'gdns88' }}
+      FIREBASE_SITE: ${{ inputs.site || vars.FIREBASE_HOSTING_SITE || 'gdns88' }}
       FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
     steps:
       - uses: actions/checkout@v4

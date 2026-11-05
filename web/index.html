@@ -6,80 +6,113 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Portal de assinaturas</title>
 <style>
-  :root { --fundo:#f6f7f9; --card:#fff; --texto:#15202b; --suave:#5b6b7b; --borda:#d9dee5; --destaque:#0b6e99; --ok:#137a3f; --erro:#b3261e; }
-  @media (prefers-color-scheme: dark) { :root { --fundo:#0e1419; --card:#161e26; --texto:#e8edf2; --suave:#93a3b3; --borda:#2a3643; --destaque:#4cb3d9; --ok:#4cc27d; --erro:#ff8a80; } }
-  * { box-sizing: border-box; }
+  :root { --fundo:#f6f7f9; --card:#fff; --texto:#15202b; --suave:#5b6b7b; --borda:#d9dee5; --destaque:#0b6e99; --ok:#137a3f; --aviso:#8a5a00; --erro:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --fundo:#0e1419; --card:#161e26; --texto:#e8edf2; --suave:#93a3b3; --borda:#2a3643; --destaque:#4cb3d9; --ok:#4cc27d; --aviso:#f0b64d; --erro:#ff8a80; } }
+  * { box-sizing:border-box; }
   body { margin:0; background:var(--fundo); color:var(--texto); font:16px/1.45 system-ui, sans-serif; }
-  main { max-width:720px; margin:0 auto; padding:16px; display:grid; gap:16px; }
-  h1 { font-size:1.3rem; margin:8px 0 0; } h2 { font-size:1.05rem; margin:0 0 4px; }
+  header { background:var(--card); border-bottom:1px solid var(--borda); position:sticky; top:0; z-index:5; }
+  .barra { max-width:960px; margin:0 auto; padding:10px 16px; display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; }
+  .barra h1 { font-size:1.05rem; margin:0 8px 0 0; }
+  nav { display:flex; flex-wrap:wrap; gap:4px; flex:1; }
+  nav a { padding:6px 12px; border-radius:8px; color:var(--suave); text-decoration:none; font-weight:600; }
+  nav a[aria-current="page"] { background:var(--destaque); color:#fff; }
+  main { max-width:960px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+  a { color:var(--destaque); }
+  h2 { font-size:1.15rem; margin:0; } h3 { font-size:1rem; margin:0; }
   .card { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:16px; display:grid; gap:12px; }
   label { display:grid; gap:4px; font-size:.9rem; color:var(--suave); }
-  input, select, button { font:inherit; padding:9px 11px; border-radius:8px; border:1px solid var(--borda); background:var(--card); color:var(--texto); }
+  input, select, button, textarea { font:inherit; padding:9px 11px; border-radius:8px; border:1px solid var(--borda); background:var(--card); color:var(--texto); min-height:40px; }
   button { cursor:pointer; background:var(--destaque); border-color:var(--destaque); color:#fff; font-weight:600; }
   button.sec { background:transparent; color:var(--texto); border-color:var(--borda); }
+  button.perigo { background:transparent; color:var(--erro); border-color:var(--erro); }
   button:disabled { opacity:.6; cursor:wait; }
   .linha { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-  .dica { font-size:.82rem; color:var(--suave); margin:0; }
+  .espaco { justify-content:space-between; }
+  .dica { font-size:.84rem; color:var(--suave); margin:0; }
   .msg { padding:9px 11px; border-radius:8px; border:1px solid var(--borda); font-size:.92rem; }
-  .msg.ok { color:var(--ok); border-color:var(--ok); } .msg.erro { color:var(--erro); border-color:var(--erro); }
+  .msg.ok { color:var(--ok); border-color:var(--ok); } .msg.erro { color:var(--erro); border-color:var(--erro); } .msg.aviso { color:var(--aviso); border-color:var(--aviso); }
   .oculto { display:none !important; }
-  .topo { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .grade { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
+  .modulo { text-align:left; background:var(--card); color:var(--texto); border:1px solid var(--borda); padding:16px; display:grid; gap:4px; border-radius:12px; min-height:84px; }
+  .modulo:hover, .item:hover { border-color:var(--destaque); }
+  .modulo strong { font-size:1.05rem; } .modulo span { color:var(--suave); font-weight:400; font-size:.9rem; }
+  .lista { display:grid; gap:8px; }
+  .item { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:12px 14px; display:grid; gap:6px; text-align:left; color:var(--texto); font-weight:400; }
+  .item .topo { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; align-items:center; }
+  .item .meta { color:var(--suave); font-size:.86rem; display:flex; flex-wrap:wrap; gap:4px 14px; }
+  .selo { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.8rem; font-weight:700; border:1px solid currentColor; }
+  .selo.ok { color:var(--ok); } .selo.erro { color:var(--erro); } .selo.aviso { color:var(--aviso); } .selo.neutro { color:var(--suave); }
+  .filtros { display:grid; grid-template-columns:1fr; gap:8px; }
+  @media (min-width:600px) { .filtros { grid-template-columns:1fr 180px auto; align-items:end; } }
+  dialog { border:1px solid var(--borda); border-radius:14px; background:var(--card); color:var(--texto); padding:0; width:min(560px, calc(100vw - 24px)); }
+  dialog::backdrop { background:rgba(0,0,0,.5); }
+  .conteudo { padding:16px; display:grid; gap:12px; max-height:85vh; overflow:auto; }
+  .eventos { display:grid; gap:6px; font-size:.86rem; color:var(--suave); }
+  .painel-saude { display:grid; gap:12px; }
+  .ponto { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; background:currentColor; }
 </style>
 </head>
 <body>
-<main>
-  <div class="topo"><h1>Portal de assinaturas</h1><button id="sair" class="sec oculto">Sair</button></div>
+<header class="oculto" id="cabecalho">
+  <div class="barra">
+    <h1>Portal de assinaturas</h1>
+    <nav aria-label="Principal">
+      <a href="#/clientes" data-rota="clientes">Clientes</a>
+      <a href="#/saude" data-rota="saude">Saúde</a>
+      <a href="#/mercadopago" data-rota="mercadopago">Mercado Pago</a>
+    </nav>
+    <button id="sair" class="sec">Sair</button>
+  </div>
+</header>
 
-  <section id="entrar" class="card">
+<main>
+  <section id="entrar" class="card oculto">
     <h2>Entrar</h2>
-    <form id="form-entrar" class="card" style="border:0;padding:0">
+    <form id="form-entrar" style="display:grid;gap:12px">
       <label>E-mail <input id="email" type="email" autocomplete="username" required></label>
       <label>Senha <input id="senha" type="password" autocomplete="current-password" required></label>
       <button type="submit">Entrar</button>
     </form>
     <div id="msg-entrar" class="msg erro oculto" role="alert"></div>
   </section>
-
-  <div id="painel" class="oculto" style="display:grid;gap:16px">
-    <section class="card">
-      <h2>Sistemas conectados</h2>
-      <p class="dica">Testa se o portal consegue falar com cada sistema (usa a chave guardada no servidor do portal).</p>
-      <div id="sistemas" class="card" style="border:0;padding:0"></div>
-    </section>
-
-    <section class="card">
-      <h2>Mercado Pago</h2>
-      <p class="dica">Os dados ficam guardados no servidor do portal. O access token e o segredo do webhook nunca voltam para esta tela: só os 4 últimos caracteres aparecem. Deixe em branco para manter o que já está guardado.</p>
-      <form id="form-mp" class="card" style="border:0;padding:0">
-        <label>Ambiente
-          <select id="mp-ambiente"><option value="teste">Teste</option><option value="producao">Produção</option></select>
-        </label>
-        <label>Public key <input id="mp-public" autocomplete="off" placeholder="APP_USR-… ou TEST-…"></label>
-        <label>Access token <input id="mp-token" type="password" autocomplete="off" placeholder="APP_USR-… ou TEST-…"><span id="mp-token-final" class="dica"></span></label>
-        <label>Segredo do webhook (assinatura secreta) <input id="mp-segredo" type="password" autocomplete="off"><span id="mp-segredo-final" class="dica"></span></label>
-        <label>URL de notificação (webhook) <input id="mp-url" type="url" autocomplete="off" placeholder="https://…"></label>
-        <div class="linha">
-          <button type="submit" id="mp-salvar">Salvar</button>
-          <button type="button" id="mp-testar" class="sec">Testar credenciais</button>
-        </div>
-      </form>
-      <div id="msg-mp" class="msg oculto" role="status"></div>
-      <p id="mp-quando" class="dica"></p>
-    </section>
-  </div>
+  <div id="vista"></div>
 </main>
+
+<dialog id="dlg"><div class="conteudo" id="dlg-conteudo"></div></dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
   // Projeto "Portal". A chave publicável é pública por natureza; quem protege os dados é o login + a lista de administradores no servidor.
+  // As telas são iguais para todos os sistemas: tudo vem da tabela `sistemas` (cada sistema segue o mesmo contrato de API).
   const URL_PORTAL = 'https://vzoyugnoywtgnvabatrw.supabase.co'
   const CHAVE_PUBLICA = 'sb_publishable_OU8JICbHiBK3FT-7cLb5Vg_k2bdT1C1'
-  const SISTEMAS = [{ codigo: 'transporte', nome: 'Transporte' }]   // acrescente aqui os próximos sistemas (e cadastre-os na tabela `sistemas`)
   const banco = supabase.createClient(URL_PORTAL, CHAVE_PUBLICA)
   const $ = (id) => document.getElementById(id)
+  const POR_PAGINA = 20
+  let temporizador = null
 
-  function aviso(el, texto, tipo) { el.textContent = texto; el.className = 'msg ' + (tipo || ''); }
-  function esconder(el) { el.classList.add('oculto') }
+  // ---------- utilidades ----------
+  function el(tag, props, ...filhos) {
+    const e = document.createElement(tag)
+    for (const [k, v] of Object.entries(props || {})) {
+      if (k === 'class') e.className = v
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v)
+      else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v)
+    }
+    for (const f of filhos.flat()) if (f != null && f !== false) e.append(f.nodeType ? f : document.createTextNode(String(f)))
+    return e
+  }
+  const aviso = (texto, tipo) => el('div', { class: 'msg ' + (tipo || ''), role: tipo === 'erro' ? 'alert' : 'status' }, texto)
+  const dataBr = (iso) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—')
+  const dataHoraBr = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR') : '—')
+  function documentoBr(d) {
+    const n = String(d || '').replace(/\D/g, '')
+    if (n.length === 14) return n.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+    if (n.length === 11) return n.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    return n || '—'
+  }
+  const ROTULO_STATUS = { trial: ['Teste', 'aviso'], ativa: ['Ativa', 'ok'], suspensa: ['Suspensa', 'erro'], cancelada: ['Cancelada', 'neutro'] }
+  const selo = (status) => { const [t, c] = ROTULO_STATUS[status] || [status, 'neutro']; return el('span', { class: 'selo ' + c }, t) }
 
   async function chamar(funcao, corpo) {
     const { data, error } = await banco.functions.invoke(funcao, { body: corpo })
@@ -91,79 +124,220 @@
     return data
   }
 
-  function mostrarPainel(logado) {
+  // ---------- roteamento ----------
+  function parar() { if (temporizador) { clearInterval(temporizador); temporizador = null } }
+  async function rotear() {
+    parar()
+    const { data } = await banco.auth.getSession()
+    const logado = !!data.session
+    $('cabecalho').classList.toggle('oculto', !logado)
     $('entrar').classList.toggle('oculto', logado)
-    $('painel').classList.toggle('oculto', !logado)
-    $('sair').classList.toggle('oculto', !logado)
+    if (!logado) { $('vista').replaceChildren(); return }
+    const partes = (location.hash.replace(/^#\/?/, '') || 'clientes').split('/')
+    const secao = partes[0]
+    document.querySelectorAll('nav a').forEach((a) => (a.dataset.rota === secao ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')))
+    const vista = $('vista'); vista.replaceChildren(aviso('Carregando…'))
+    try {
+      if (secao === 'clientes' && partes[1]) await telaSistema(decodeURIComponent(partes[1]))
+      else if (secao === 'clientes') await telaModulos()
+      else if (secao === 'saude') await telaSaude()
+      else if (secao === 'mercadopago') await telaMercadoPago()
+      else location.hash = '#/clientes'
+    } catch (e) { vista.replaceChildren(aviso(e.message, 'erro')) }
+  }
+  window.addEventListener('hashchange', rotear)
+
+  // ---------- Clientes: um módulo por sistema ----------
+  async function telaModulos() {
+    const { sistemas } = await chamar('portal-geral', { acao: 'sistemas' })
+    $('vista').replaceChildren(el('div', { class: 'card' },
+      el('h2', {}, 'Clientes'),
+      el('p', { class: 'dica' }, 'Cada sistema é um módulo. Abra um para ver os clientes, o status das assinaturas e gerenciá-las.'),
+      sistemas.length === 0 ? aviso('Nenhum sistema cadastrado.', 'aviso')
+        : el('div', { class: 'grade' }, sistemas.map((s) => el('button', { class: 'modulo', onclick: () => (location.hash = '#/clientes/' + encodeURIComponent(s.codigo)) }, el('strong', {}, s.nome), el('span', {}, 'Gerenciar assinaturas →'))))))
   }
 
-  function desenharSistemas() {
-    const caixa = $('sistemas'); caixa.replaceChildren()
-    for (const s of SISTEMAS) {
-      const linha = document.createElement('div'); linha.className = 'linha'
-      const nome = document.createElement('strong'); nome.textContent = s.nome
-      const botao = document.createElement('button'); botao.className = 'sec'; botao.textContent = 'Testar conexão'
-      const resultado = document.createElement('span'); resultado.className = 'dica'
-      botao.onclick = async () => {
-        botao.disabled = true; resultado.textContent = 'Testando…'
-        try {
-          const r = await chamar('chamar-sistema', { sistema: s.codigo, acao: 'testar' })
-          resultado.textContent = r.ok ? `Conectado (${r.milissegundos} ms, ${r.total} empresa(s)).` : `Falhou: ${r.erro}`
-          resultado.style.color = r.ok ? 'var(--ok)' : 'var(--erro)'
-        } catch (e) { resultado.textContent = 'Falhou: ' + e.message; resultado.style.color = 'var(--erro)' }
-        botao.disabled = false
-      }
-      linha.append(nome, botao, resultado); caixa.append(linha)
+  // ---------- Clientes de um sistema: lista, status e ações ----------
+  async function telaSistema(codigo) {
+    const { sistemas } = await chamar('portal-geral', { acao: 'sistemas' })
+    const sistema = sistemas.find((s) => s.codigo === codigo)
+    if (!sistema) throw new Error('Sistema não encontrado.')
+    const estado = { busca: '', status: '', pagina: 0, total: 0 }
+    const busca = el('input', { type: 'search', placeholder: 'Nome, fantasia ou CNPJ/CPF', 'aria-label': 'Buscar' })
+    const status = el('select', { 'aria-label': 'Situação' }, el('option', { value: '' }, 'Todas as situações'), ...Object.entries(ROTULO_STATUS).map(([v, [t]]) => el('option', { value: v }, t)))
+    const caixa = el('div', { class: 'lista' })
+    const rodape = el('div', { class: 'linha espaco' })
+    async function carregar() {
+      caixa.replaceChildren(aviso('Carregando…'))
+      try {
+        const r = await chamar('chamar-sistema', { sistema: codigo, acao: 'listar', busca: estado.busca || undefined, status: estado.status || undefined, limite: POR_PAGINA, deslocamento: estado.pagina * POR_PAGINA })
+        estado.total = r.total
+        caixa.replaceChildren(...(r.empresas.length ? r.empresas.map((e) => linhaDaEmpresa(e)) : [aviso('Nenhum cliente encontrado.', 'aviso')]))
+        const paginas = Math.max(1, Math.ceil(r.total / POR_PAGINA))
+        rodape.replaceChildren(
+          el('span', { class: 'dica' }, `${r.total} cliente(s) · página ${estado.pagina + 1} de ${paginas}`),
+          el('div', { class: 'linha' },
+            el('button', { class: 'sec', disabled: estado.pagina === 0, onclick: () => { estado.pagina--; carregar() } }, 'Anterior'),
+            el('button', { class: 'sec', disabled: estado.pagina + 1 >= paginas, onclick: () => { estado.pagina++; carregar() } }, 'Próxima')))
+      } catch (e) { caixa.replaceChildren(aviso(e.message, 'erro')); rodape.replaceChildren() }
     }
+    function linhaDaEmpresa(e) {
+      return el('button', { class: 'item', onclick: () => abrirEmpresa(codigo, e, carregar) },
+        el('div', { class: 'topo' }, el('strong', {}, e.nome_fantasia || e.nome), selo(e.status)),
+        el('div', { class: 'meta' },
+          el('span', {}, documentoBr(e.documento)),
+          el('span', {}, 'Plano: ' + e.plano_codigo),
+          e.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(e.trial_ate)) : null,
+          el('span', {}, `${e.usuarios} usuário(s) · ${e.veiculos} veículo(s)`),
+          e.liberada ? null : el('span', { style: 'color:var(--erro)' }, 'Acesso bloqueado')))
+    }
+    let espera
+    busca.addEventListener('input', () => { clearTimeout(espera); espera = setTimeout(() => { estado.busca = busca.value.trim(); estado.pagina = 0; carregar() }, 350) })
+    status.addEventListener('change', () => { estado.status = status.value; estado.pagina = 0; carregar() })
+    $('vista').replaceChildren(el('div', { class: 'card' },
+      el('div', { class: 'linha espaco' }, el('h2', {}, sistema.nome), el('a', { href: '#/clientes' }, '← Todos os sistemas')),
+      el('div', { class: 'filtros' }, el('label', {}, 'Buscar', busca), el('label', {}, 'Situação', status), el('button', { class: 'sec', onclick: carregar }, 'Atualizar')),
+      caixa, rodape))
+    await carregar()
   }
 
-  function preencherMp(c) {
-    $('mp-ambiente').value = c.ambiente
-    $('mp-public').value = c.public_key || ''
-    $('mp-url').value = c.url_notificacao || ''
-    $('mp-token').value = ''; $('mp-segredo').value = ''
-    $('mp-token-final').textContent = c.access_token_final ? 'Guardado: ' + c.access_token_final : 'Nada guardado.'
-    $('mp-segredo-final').textContent = c.webhook_secret_final ? 'Guardado: ' + c.webhook_secret_final : 'Nada guardado.'
-    $('mp-quando').textContent = c.atualizado_em ? 'Última alteração: ' + new Date(c.atualizado_em).toLocaleString('pt-BR') : ''
+  // ---------- detalhe e ações de uma assinatura ----------
+  function abrirEmpresa(codigo, e, aoMudar) {
+    const dlg = $('dlg'), c = $('dlg-conteudo')
+    const resultado = el('div', { class: 'oculto' })
+    const motivo = el('input', { maxlength: 300, placeholder: 'Opcional: fica registrado no histórico', 'aria-label': 'Motivo' })
+    const dias = el('input', { type: 'number', min: 1, max: 365, value: 7, 'aria-label': 'Dias de teste', style: 'width:90px' })
+    const plano = el('input', { value: e.plano_codigo, maxlength: 40, 'aria-label': 'Código do plano', style: 'width:160px' })
+    const historico = el('div', { class: 'eventos' })
+    const atual = { ...e }
+
+    function desenhar() {
+      c.replaceChildren(
+        el('div', { class: 'linha espaco' }, el('h2', {}, atual.nome_fantasia || atual.nome), el('button', { class: 'sec', onclick: () => dlg.close() }, 'Fechar')),
+        el('div', { class: 'meta', style: 'display:grid;gap:2px;color:var(--suave);font-size:.9rem' },
+          el('span', {}, atual.nome), el('span', {}, documentoBr(atual.documento)),
+          atual.email ? el('span', {}, atual.email) : null, atual.telefone ? el('span', {}, atual.telefone) : null,
+          el('span', {}, 'Cliente desde ' + dataBr(atual.criada_em))),
+        el('div', { class: 'linha' }, selo(atual.status), el('span', {}, 'Plano: ' + atual.plano_codigo),
+          atual.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(atual.trial_ate)) : null,
+          el('span', { style: 'color:' + (atual.liberada ? 'var(--ok)' : 'var(--erro)') }, atual.liberada ? 'Acesso liberado' : 'Acesso bloqueado')),
+        el('label', {}, 'Motivo da alteração', motivo),
+        el('div', { class: 'linha' },
+          el('button', { onclick: () => agir('ativar', {}, 'Ativar esta assinatura?') }, 'Ativar'),
+          el('button', { class: 'perigo', onclick: () => agir('suspender', {}, 'Suspender? O acesso da empresa será bloqueado.') }, 'Suspender'),
+          el('button', { class: 'perigo', onclick: () => agir('cancelar', {}, 'Cancelar esta assinatura?') }, 'Cancelar')),
+        el('div', { class: 'linha' }, el('label', {}, 'Estender teste (dias)', dias), el('button', { class: 'sec', onclick: () => agir('estender_teste', { dias: Number(dias.value) }) }, 'Estender')),
+        el('div', { class: 'linha' }, el('label', {}, 'Plano', plano), el('button', { class: 'sec', onclick: () => agir('trocar_plano', { plano_codigo: plano.value.trim() }, 'Trocar o plano?') }, 'Trocar plano')),
+        resultado,
+        el('h3', {}, 'Histórico'), historico)
+    }
+    async function agir(acao, dados, confirmacao) {
+      if (confirmacao && !confirm(confirmacao)) return
+      resultado.className = 'msg'; resultado.textContent = 'Enviando…'
+      const botoes = c.querySelectorAll('button'); botoes.forEach((b) => (b.disabled = true))
+      try {
+        const m = motivo.value.trim()
+        const r = await chamar('chamar-sistema', { sistema: codigo, acao, empresa_id: atual.empresa_id, dados: { ...dados, ...(m ? { motivo: m } : {}) } })
+        Object.assign(atual, { status: r.assinatura.status, plano_codigo: r.assinatura.plano_codigo, trial_ate: r.assinatura.trial_ate, liberada: r.assinatura.liberada })
+        const guardados = { motivo: motivo.value, dias: dias.value, plano: plano.value }
+        desenhar(); motivo.value = guardados.motivo; dias.value = guardados.dias; plano.value = guardados.plano
+        resultado.className = 'msg ok'; resultado.textContent = 'Alteração feita.'
+        aoMudar(); carregarHistorico()
+      } catch (err) {
+        botoes.forEach((b) => (b.disabled = false))
+        resultado.className = 'msg erro'; resultado.textContent = err.message
+      }
+    }
+    async function carregarHistorico() {
+      try {
+        const r = await chamar('chamar-sistema', { sistema: codigo, acao: 'eventos', empresa_id: atual.empresa_id, limite: 10 })
+        historico.replaceChildren(...(r.eventos.length ? r.eventos.map((ev) => el('div', {},
+          `${dataHoraBr(ev.criado_em)} · ${ev.acao}${ev.anterior && ev.depois ? ` (${ev.anterior.status} → ${ev.depois.status})` : ''}${ev.detalhes && ev.detalhes.motivo ? ' · ' + ev.detalhes.motivo : ''}`)) : [el('span', {}, 'Nenhuma alteração feita pelo portal ainda.')]))
+      } catch (err) { historico.replaceChildren(aviso(err.message, 'erro')) }
+    }
+    desenhar(); carregarHistorico(); dlg.showModal()
   }
 
-  async function carregar() {
-    desenharSistemas()
-    try { preencherMp((await chamar('config-mercadopago', { acao: 'ler' })).config) }
-    catch (e) { aviso($('msg-mp'), e.message, 'erro') }
+  // ---------- Saúde das comunicações (igual para todos os sistemas) ----------
+  const ESTADO = { ok: ['Operacional', 'ok'], falha: ['Com falha', 'erro'], nao_configurado: ['Não configurado', 'aviso'] }
+  async function telaSaude() {
+    const cartoes = el('div', { class: 'painel-saude' })
+    const faixa = el('div', {})
+    const historico = el('div', { class: 'eventos' })
+    const botao = el('button', { onclick: verificar }, 'Verificar agora')
+    async function verificar() {
+      botao.disabled = true; faixa.replaceChildren(aviso('Verificando as comunicações…'))
+      try {
+        const r = await chamar('portal-geral', { acao: 'saude' })
+        const tudo = r.resumo.falha === 0 && r.resumo.nao_configurado === 0
+        faixa.replaceChildren(aviso(tudo ? 'Todas as comunicações estão operacionais.' : `${r.resumo.falha} com falha, ${r.resumo.nao_configurado} não configurada(s), ${r.resumo.ok} operacional(is).`, r.resumo.falha > 0 ? 'erro' : tudo ? 'ok' : 'aviso'),
+          el('p', { class: 'dica' }, 'Verificado em ' + dataHoraBr(r.verificado_em)))
+        cartoes.replaceChildren(...r.itens.map((i) => { const [t, cls] = ESTADO[i.estado]
+          return el('div', { class: 'card' },
+            el('div', { class: 'linha espaco' }, el('strong', {}, i.nome), el('span', { class: 'selo ' + cls, style: 'display:inline-flex;align-items:center' }, el('span', { class: 'ponto', 'aria-hidden': 'true' }), t)),
+            i.detalhe ? el('p', { class: 'dica' }, i.detalhe) : null,
+            i.milissegundos != null ? el('p', { class: 'dica' }, `Resposta em ${i.milissegundos} ms`) : null) }))
+        historico.replaceChildren(...(r.chamadas.length ? r.chamadas.map((l) => el('div', {}, `${dataHoraBr(l.quando)} · ${l.sistema || '—'} · ${l.acao} · ${l.ok ? 'ok' : 'falhou'}`)) : [el('span', {}, 'Sem chamadas registradas.')]))
+      } catch (e) { faixa.replaceChildren(aviso(e.message, 'erro')) }
+      botao.disabled = false
+    }
+    $('vista').replaceChildren(el('div', { class: 'card' },
+      el('div', { class: 'linha espaco' }, el('h2', {}, 'Saúde das comunicações'), botao),
+      el('p', { class: 'dica' }, 'Testa de verdade o banco do portal, a API de cada sistema e o Mercado Pago. Atualiza sozinho a cada 60 segundos.'),
+      faixa, cartoes, el('h3', {}, 'Últimas chamadas'), historico))
+    await verificar()
+    temporizador = setInterval(() => { if (!botao.disabled) verificar() }, 60000)
   }
 
+  // ---------- Mercado Pago ----------
+  async function telaMercadoPago() {
+    const ambiente = el('select', { id: 'mp-ambiente' }, el('option', { value: 'teste' }, 'Teste'), el('option', { value: 'producao' }, 'Produção'))
+    const pub = el('input', { autocomplete: 'off', placeholder: 'APP_USR-… ou TEST-…' })
+    const tok = el('input', { type: 'password', autocomplete: 'off', placeholder: 'APP_USR-… ou TEST-…' })
+    const sec = el('input', { type: 'password', autocomplete: 'off' })
+    const url = el('input', { type: 'url', autocomplete: 'off', placeholder: 'https://…' })
+    const tokFim = el('span', { class: 'dica' }), secFim = el('span', { class: 'dica' }), quando = el('p', { class: 'dica' }), msg = el('div', { class: 'oculto' })
+    const salvar = el('button', { type: 'submit' }, 'Salvar'), testar = el('button', { type: 'button', class: 'sec' }, 'Testar credenciais')
+    const mostrar = (texto, tipo) => { msg.className = 'msg ' + (tipo || ''); msg.textContent = texto }
+    function preencher(c) {
+      ambiente.value = c.ambiente; pub.value = c.public_key || ''; url.value = c.url_notificacao || ''; tok.value = ''; sec.value = ''
+      tokFim.textContent = c.access_token_final ? 'Guardado: ' + c.access_token_final : 'Nada guardado.'
+      secFim.textContent = c.webhook_secret_final ? 'Guardado: ' + c.webhook_secret_final : 'Nada guardado.'
+      quando.textContent = c.atualizado_em ? 'Última alteração: ' + dataHoraBr(c.atualizado_em) : ''
+    }
+    const form = el('form', { style: 'display:grid;gap:12px', onsubmit: async (ev) => {
+      ev.preventDefault(); salvar.disabled = true
+      try {
+        const r = await chamar('config-mercadopago', { acao: 'salvar', ambiente: ambiente.value, public_key: pub.value, access_token: tok.value, webhook_secret: sec.value, url_notificacao: url.value })
+        preencher(r.config); mostrar('Configuração salva.', 'ok')
+      } catch (e) { mostrar(e.message, 'erro') }
+      salvar.disabled = false } },
+      el('label', {}, 'Ambiente', ambiente), el('label', {}, 'Public key', pub), el('label', {}, 'Access token', tok, tokFim),
+      el('label', {}, 'Segredo do webhook (assinatura secreta)', sec, secFim), el('label', {}, 'URL de notificação (webhook)', url),
+      el('div', { class: 'linha' }, salvar, testar))
+    testar.onclick = async () => {
+      testar.disabled = true; mostrar('Testando…')
+      try { const r = await chamar('config-mercadopago', { acao: 'testar' }); r.ok ? mostrar(`Credenciais aceitas pelo Mercado Pago${r.conta.apelido ? ' (conta ' + r.conta.apelido + ')' : ''}.`, 'ok') : mostrar(r.erro, 'erro') }
+      catch (e) { mostrar(e.message, 'erro') }
+      testar.disabled = false
+    }
+    $('vista').replaceChildren(el('div', { class: 'card' },
+      el('h2', {}, 'Mercado Pago'),
+      el('p', { class: 'dica' }, 'Os dados ficam guardados no servidor do portal. O access token e o segredo do webhook nunca voltam para esta tela: só os 4 últimos caracteres aparecem. Deixe em branco para manter o que já está guardado.'),
+      form, msg, quando))
+    preencher((await chamar('config-mercadopago', { acao: 'ler' })).config)
+  }
+
+  // ---------- login ----------
   $('form-entrar').addEventListener('submit', async (ev) => {
-    ev.preventDefault(); esconder($('msg-entrar'))
+    ev.preventDefault(); $('msg-entrar').classList.add('oculto')
     const { error } = await banco.auth.signInWithPassword({ email: $('email').value.trim(), password: $('senha').value })
-    if (error) { aviso($('msg-entrar'), 'E-mail ou senha incorretos.', 'erro'); return }
-    $('senha').value = ''; mostrarPainel(true); carregar()
+    if (error) { $('msg-entrar').textContent = 'E-mail ou senha incorretos.'; $('msg-entrar').classList.remove('oculto'); return }
+    $('senha').value = ''; rotear()
   })
-  $('sair').onclick = async () => { await banco.auth.signOut(); mostrarPainel(false) }
-
-  $('form-mp').addEventListener('submit', async (ev) => {
-    ev.preventDefault(); $('mp-salvar').disabled = true
-    try {
-      const r = await chamar('config-mercadopago', {
-        acao: 'salvar', ambiente: $('mp-ambiente').value, public_key: $('mp-public').value,
-        access_token: $('mp-token').value, webhook_secret: $('mp-segredo').value, url_notificacao: $('mp-url').value,
-      })
-      preencherMp(r.config); aviso($('msg-mp'), 'Configuração salva.', 'ok')
-    } catch (e) { aviso($('msg-mp'), e.message, 'erro') }
-    $('mp-salvar').disabled = false
-  })
-
-  $('mp-testar').onclick = async () => {
-    $('mp-testar').disabled = true; aviso($('msg-mp'), 'Testando…', '')
-    try {
-      const r = await chamar('config-mercadopago', { acao: 'testar' })
-      if (r.ok) aviso($('msg-mp'), `Credenciais aceitas pelo Mercado Pago${r.conta.apelido ? ' (conta ' + r.conta.apelido + ')' : ''}.`, 'ok')
-      else aviso($('msg-mp'), r.erro, 'erro')
-    } catch (e) { aviso($('msg-mp'), e.message, 'erro') }
-    $('mp-testar').disabled = false
-  }
-
-  banco.auth.getSession().then(({ data }) => { if (data.session) { mostrarPainel(true); carregar() } })
+  $('sair').onclick = async () => { await banco.auth.signOut(); parar(); location.hash = ''; rotear() }
+  banco.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') rotear() })
+  rotear()
 </script>
 </body>
 </html>

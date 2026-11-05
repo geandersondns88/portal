@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.config-mercadopago]
 verify_jwt = true
+
+[functions.portal-geral]
+verify_jwt = true

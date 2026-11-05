@@ -10,6 +10,7 @@ Roda em um projeto Supabase próprio ("Portal", ref `vzoyugnoywtgnvabatrw`); cad
 - `supabase/functions/`: Edge Functions do Portal
   - `chamar-sistema`: chama a API de assinaturas de um sistema em nome do administrador logado. A chave de cada sistema é um segredo
     `PORTAL_KEY_*` (o nome fica em `sistemas.chave_segredo`) e nunca vai para a tela.
+  - `portal-geral`: lista os sistemas e faz a verificação de saúde das comunicações.
   - `config-mercadopago`: lê, salva e testa as credenciais do Mercado Pago; o access token e o segredo do webhook nunca voltam para a tela (só os 4 últimos caracteres).
 - `web/index.html`: página única (login + teste de conexão com os sistemas + Mercado Pago).
 - `.github/workflows/publicar.yml`: publica `web/` no Firebase Hosting.
@@ -34,16 +35,22 @@ As tabelas não têm acesso para o navegador (RLS sem política, `anon` e `authe
 
 Para cada novo sistema: cadastre-o em `sistemas` (código, nome, URL da API, nome do segredo `PORTAL_KEY_<SISTEMA>`), crie o segredo e acrescente o sistema na lista `SISTEMAS` de `web/index.html`.
 
+## Telas
+
+As telas são **iguais para todos os sistemas**: nada é escrito por sistema na página, tudo vem da tabela `sistemas`.
+- **Clientes**: cada sistema aparece como um módulo; ao abrir, lista os clientes com situação, plano, fim do teste e uso (busca, filtro por situação, paginação). Ao tocar num cliente: ativar, suspender, cancelar, estender o teste, trocar o plano e ver o histórico.
+- **Saúde**: testa de verdade o banco do portal, a API de cada sistema e o Mercado Pago (operacional, com falha ou não configurado) e mostra as últimas chamadas. Atualiza a cada 60 segundos.
+- **Mercado Pago**: ambiente, public key, access token, segredo e URL do webhook.
+
+Para incluir um sistema novo: cadastre-o em `sistemas`, crie o segredo `PORTAL_KEY_<SISTEMA>` e pronto: ele aparece em Clientes e em Saúde. O sistema precisa seguir o mesmo contrato de API (`docs/api-transporte.md`).
+
 ## Publicar a página no Firebase Hosting
 
-1. No Firebase Console, ative o Hosting e crie um site só para o portal (*Hosting → Add another site*), por exemplo `frotus88-portal`.
-2. Neste repositório, em *Settings → Secrets and variables → Actions*, crie o **Secret** `FIREBASE_SERVICE_ACCOUNT` com o JSON da conta de serviço do projeto
-   (papel *Firebase Hosting Admin*; pode ser o mesmo JSON que publica o Transporte, se o site ficar no mesmo projeto).
-3. *Actions → Publicar portal no Firebase Hosting → Run workflow*, com o id do site no campo **site** (ou guarde-o na variável `FIREBASE_HOSTING_SITE`).
-
-Depois disso, cada mudança em `web/` na `main` publica sozinha.
+O workflow `.github/workflows/publicar.yml` publica `web/` no site `gdns88` (projeto `gdns88`) sozinho a cada mudança em `web/` na `main`, e também manualmente
+(*Actions → Publicar portal no Firebase Hosting → Run workflow*; os campos **site** e **projeto** são opcionais). Usa o secret `FIREBASE_SERVICE_ACCOUNT` deste repositório
+(Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada). Endereço: `https://gdns88.web.app`.
 
 ## Funções do Supabase
 
-As funções e migrations foram aplicadas no projeto Portal pelo painel/MCP do Supabase. Para reaplicar com a CLI: `supabase functions deploy chamar-sistema` e
-`supabase functions deploy config-mercadopago` (ambas com verificação de JWT ligada), e `supabase db push` ou colar as migrations no SQL Editor.
+As funções e migrations foram aplicadas no projeto Portal pelo painel/MCP do Supabase. Para reaplicar com a CLI: `supabase functions deploy chamar-sistema`,
+`supabase functions deploy portal-geral` e `supabase functions deploy config-mercadopago` (todas com verificação de JWT ligada), e `supabase db push` ou colar as migrations no SQL Editor.
