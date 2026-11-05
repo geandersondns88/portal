@@ -394,7 +394,16 @@
       el('div', { class: 'dois' }, el('label', {}, 'Máx. de veículos', f.veic), el('label', {}, 'Máx. de usuários', f.usu)),
       el('label', {}, 'Preço mensal (R$)', f.preco),
       el('label', { class: 'marca' }, f.ativo, 'Plano ativo (disponível para as empresas)'),
-      el('div', { class: 'linha' }, salvar, el('button', { type: 'button', class: 'sec', onclick: () => dlg.close() }, 'Cancelar')), resultado)
+      el('div', { class: 'linha' }, salvar, el('button', { type: 'button', class: 'sec', onclick: () => dlg.close() }, 'Cancelar'),
+        novo ? null : el('button', { type: 'button', class: 'perigo', onclick: excluir }, 'Excluir plano')), resultado)
+    async function excluir() {
+      if (p.empresas > 0) { resultado.className = 'msg erro'; resultado.textContent = `Este plano está em uso por ${p.empresas} empresa(s): troque o plano delas antes de excluir.`; return }
+      if (!confirm(`Excluir o plano "${p.nome}"? Isso não pode ser desfeito.`)) return
+      resultado.className = 'msg'; resultado.textContent = 'Excluindo…'
+      dlg.querySelectorAll('button').forEach((b) => (b.disabled = true))
+      try { await chamar('chamar-sistema', { sistema: codigo, acao: 'plano_excluir', codigo: p.codigo }); dlg.close(); aoSalvar() }
+      catch (e) { resultado.className = 'msg erro'; resultado.textContent = e.message; dlg.querySelectorAll('button').forEach((b) => (b.disabled = false)) }
+    }
     c.replaceChildren(el('h2', {}, novo ? 'Novo plano' : 'Editar plano'), form)
     dlg.showModal()
   }
