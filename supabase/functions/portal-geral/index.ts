@@ -1,8 +1,11 @@
 // Visão geral do portal, só para administrador.
-// { acao: 'sistemas' }  → sistemas ativos (código e nome) para montar a tela de clientes.
-// { acao: 'saude' }     → testa de verdade cada comunicação (o próprio banco do portal, cada sistema e o Mercado Pago) e devolve as últimas chamadas.
+// { acao: 'sistemas' }                    → sistemas ativos (código, nome e ícone) para montar a tela principal.
+// { acao: 'saude' }                       → testa de verdade o banco do portal, cada sistema e o Mercado Pago e devolve as últimas chamadas.
+// { acao: 'saude', sistema: 'transporte' } → só os serviços daquele sistema (a API dele) e as últimas chamadas dele.
+// { acao: 'sincronizar', sistema }        → traz do sistema todas as empresas e cria o que faltar aqui (cliente e assinatura); recupera avisos perdidos.
 // A chave de cada sistema e o access token do Mercado Pago ficam no servidor: a tela só recebe o resultado (operacional, falha ou não configurado).
 import { bancoDeServico, exigirAdministrador, responder, respostaOpcoes } from '../_shared/comum.ts'
+import { registrarEmpresa, validarEmpresa } from '../_shared/registro.ts'
 
 type Estado = 'ok' | 'falha' | 'nao_configurado'
 type Item = { chave: string; nome: string; estado: Estado; milissegundos: number | null; detalhe: string | null }
@@ -70,7 +73,7 @@ Deno.serve(async (req) => {
   }
 
   if (c.acao === 'sistemas') {
-    const { data, error } = await banco.from('sistemas').select('codigo, nome').eq('ativo', true).order('nome')
+    const { data, error } = await banco.from('sistemas').select('codigo, nome, icone').eq('ativo', true).order('nome')
     if (error) {
       console.error('sistemas:', error.message)
       return responder({ erro: 'Algo deu errado. Tente novamente.' }, 500)
@@ -80,16 +83,22 @@ Deno.serve(async (req) => {
 
   if (c.acao === 'saude') {
     const inicioBanco = Date.now()
-    const { data: sistemas, error } = await banco.from('sistemas').select('id, codigo, nome, url_api, chave_segredo').eq('ativo', true).order('nome')
-    const itens: Item[] = [
+    const so = typeof c.sistema === 'string' ? c.sistema : null
+    let consulta = banco.from('sistemas').select('id, codigo, nome, url_api, chave_segredo').eq('ativo', true).order('nome')
+    if (so) consulta = consulta.eq('codigo', so)
+    const { data: sistemas, error } = await consulta
+    if (so && !error && (sistemas ?? []).length === 0) return responder({ erro: 'Sistema não encontrado.' }, 404)
+    const itens: Item[] = so ? [] : [
       error
         ? { chave: 'banco', nome: 'Banco de dados do portal', estado: 'falha', milissegundos: null, detalhe: 'Não foi possível consultar o banco.' }
         : { chave: 'banco', nome: 'Banco de dados do portal', estado: 'ok', milissegundos: Date.now() - inicioBanco, detalhe: null },
     ]
     itens.push(...(await Promise.all((sistemas ?? []).map((s) => verificarSistema(banco, s)))))
-    itens.push(await verificarMercadoPago(banco))
+    if (!so) itens.push(await verificarMercadoPago(banco))
 
-    const { data: chamadas } = await banco.from('chamadas_aos_sistemas').select('acao, ok, created_at, sistemas(nome)').order('created_at', { ascending: false }).limit(15)
+    let consultaChamadas = banco.from('chamadas_aos_sistemas').select('acao, ok, created_at, sistemas(nome)').order('created_at', { ascending: false }).limit(15)
+    if (so && sistemas && sistemas[0]) consultaChamadas = consultaChamadas.eq('sistema_id', sistemas[0].id)
+    const { data: chamadas } = await consultaChamadas
     const resumo = { ok: 0, falha: 0, nao_configurado: 0 }
     for (const i of itens) resumo[i.estado] += 1
     return responder({
@@ -99,6 +108,43 @@ Deno.serve(async (req) => {
       resumo,
       chamadas: (chamadas ?? []).map((l: Record<string, unknown>) => ({ acao: l.acao, ok: l.ok, quando: l.created_at, sistema: (l.sistemas as { nome?: string } | null)?.nome ?? null })),
     })
+  }
+
+  if (c.acao === 'sincronizar') {
+    if (typeof c.sistema !== 'string') return responder({ erro: 'Informe o sistema.' }, 400)
+    const { data: s, error } = await banco.from('sistemas').select('id, url_api, chave_segredo, ativo').eq('codigo', c.sistema).maybeSingle()
+    if (error) {
+      console.error('sistemas:', error.message)
+      return responder({ erro: 'Algo deu errado. Tente novamente.' }, 500)
+    }
+    if (!s || !s.ativo) return responder({ erro: 'Sistema não encontrado.' }, 404)
+    if (!/^https:\/\//.test(s.url_api) || !/^PORTAL_KEY_[A-Z0-9_]+$/.test(s.chave_segredo)) return responder({ erro: 'Cadastro do sistema inválido.' }, 500)
+    const chave = Deno.env.get(s.chave_segredo)
+    if (!chave) return responder({ erro: `O segredo ${s.chave_segredo} ainda não foi cadastrado neste projeto.` }, 503)
+
+    let total = 0, criados = 0, atualizados = 0, ignorados = 0
+    try {
+      for (let pagina = 0; pagina < 100; pagina++) {
+        const r = await fetch(s.url_api, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-portal-key': chave }, body: JSON.stringify({ acao: 'listar', limite: 200, deslocamento: pagina * 200 }), signal: AbortSignal.timeout(20000) })
+        const corpo = await r.json().catch(() => null)
+        if (!r.ok || corpo?.ok !== true) return responder({ erro: typeof corpo?.erro === 'string' ? corpo.erro : 'O sistema não respondeu como esperado.', total, criados, atualizados }, 502)
+        const empresas = Array.isArray(corpo.empresas) ? corpo.empresas : []
+        for (const bruta of empresas) {
+          total += 1
+          const validada = validarEmpresa(bruta)
+          if (!validada.ok) { ignorados += 1; continue }
+          const { criado } = await registrarEmpresa(banco, s.id, validada.empresa, 'sincronizacao')
+          if (criado) criados += 1; else atualizados += 1
+        }
+        if (empresas.length < 200) break
+      }
+    } catch (e) {
+      console.error('sincronizar:', (e as Error).message)
+      await banco.from('chamadas_aos_sistemas').insert({ sistema_id: s.id, acao: 'sincronizar', pedido: {}, resposta: { total, criados, atualizados }, ok: false })
+      return responder({ erro: 'A sincronização foi interrompida. Tente novamente.', total, criados, atualizados }, 502)
+    }
+    await banco.from('chamadas_aos_sistemas').insert({ sistema_id: s.id, acao: 'sincronizar', pedido: {}, resposta: { total, criados, atualizados, ignorados }, ok: true })
+    return responder({ ok: true, total, criados, atualizados, ignorados })
   }
 
   return responder({ erro: 'Ação inválida.' }, 400)

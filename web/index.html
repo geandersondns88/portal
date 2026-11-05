@@ -10,18 +10,20 @@
   @media (prefers-color-scheme: dark) { :root { --fundo:#0e1419; --card:#161e26; --texto:#e8edf2; --suave:#93a3b3; --borda:#2a3643; --destaque:#4cb3d9; --ok:#4cc27d; --aviso:#f0b64d; --erro:#ff8a80; } }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--fundo); color:var(--texto); font:16px/1.45 system-ui, sans-serif; }
+  a { color:var(--destaque); }
   header { background:var(--card); border-bottom:1px solid var(--borda); position:sticky; top:0; z-index:5; }
   .barra { max-width:960px; margin:0 auto; padding:10px 16px; display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; }
   .barra h1 { font-size:1.05rem; margin:0 8px 0 0; }
   nav { display:flex; flex-wrap:wrap; gap:4px; flex:1; }
-  nav a { padding:6px 12px; border-radius:8px; color:var(--suave); text-decoration:none; font-weight:600; }
-  nav a[aria-current="page"] { background:var(--destaque); color:#fff; }
+  nav a, .abas a { padding:6px 12px; border-radius:8px; color:var(--suave); text-decoration:none; font-weight:600; }
+  nav a[aria-current="page"], .abas a[aria-current="page"] { background:var(--destaque); color:#fff; }
   main { max-width:960px; margin:0 auto; padding:16px; display:grid; gap:16px; }
-  a { color:var(--destaque); }
   h2 { font-size:1.15rem; margin:0; } h3 { font-size:1rem; margin:0; }
   .card { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:16px; display:grid; gap:12px; }
   label { display:grid; gap:4px; font-size:.9rem; color:var(--suave); }
+  label.marca { display:flex; align-items:center; gap:8px; }
   input, select, button, textarea { font:inherit; padding:9px 11px; border-radius:8px; border:1px solid var(--borda); background:var(--card); color:var(--texto); min-height:40px; }
+  input[type=checkbox] { min-height:0; width:18px; height:18px; padding:0; }
   button { cursor:pointer; background:var(--destaque); border-color:var(--destaque); color:#fff; font-weight:600; }
   button.sec { background:transparent; color:var(--texto); border-color:var(--borda); }
   button.perigo { background:transparent; color:var(--erro); border-color:var(--erro); }
@@ -32,10 +34,13 @@
   .msg { padding:9px 11px; border-radius:8px; border:1px solid var(--borda); font-size:.92rem; }
   .msg.ok { color:var(--ok); border-color:var(--ok); } .msg.erro { color:var(--erro); border-color:var(--erro); } .msg.aviso { color:var(--aviso); border-color:var(--aviso); }
   .oculto { display:none !important; }
-  .grade { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
-  .modulo { text-align:left; background:var(--card); color:var(--texto); border:1px solid var(--borda); padding:16px; display:grid; gap:4px; border-radius:12px; min-height:84px; }
-  .modulo:hover, .item:hover { border-color:var(--destaque); }
-  .modulo strong { font-size:1.05rem; } .modulo span { color:var(--suave); font-weight:400; font-size:.9rem; }
+  .grade { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; }
+  .caixa { text-align:center; background:var(--card); color:var(--texto); border:1px solid var(--borda); padding:22px 14px; display:grid; justify-items:center; gap:10px; border-radius:14px; min-height:140px; align-content:center; }
+  .caixa:hover, .item:hover { border-color:var(--destaque); }
+  svg { width:30px; height:30px; color:var(--destaque); flex:none; }
+  .caixa svg { width:48px; height:48px; }
+  .caixa strong { font-size:1.05rem; }
+  .abas { display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid var(--borda); padding-bottom:8px; }
   .lista { display:grid; gap:8px; }
   .item { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:12px 14px; display:grid; gap:6px; text-align:left; color:var(--texto); font-weight:400; }
   .item .topo { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; align-items:center; }
@@ -43,13 +48,13 @@
   .selo { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.8rem; font-weight:700; border:1px solid currentColor; }
   .selo.ok { color:var(--ok); } .selo.erro { color:var(--erro); } .selo.aviso { color:var(--aviso); } .selo.neutro { color:var(--suave); }
   .filtros { display:grid; grid-template-columns:1fr; gap:8px; }
-  @media (min-width:600px) { .filtros { grid-template-columns:1fr 180px auto; align-items:end; } }
+  @media (min-width:600px) { .filtros { grid-template-columns:1fr 180px auto auto; align-items:end; } }
   dialog { border:1px solid var(--borda); border-radius:14px; background:var(--card); color:var(--texto); padding:0; width:min(560px, calc(100vw - 24px)); }
   dialog::backdrop { background:rgba(0,0,0,.5); }
   .conteudo { padding:16px; display:grid; gap:12px; max-height:85vh; overflow:auto; }
   .eventos { display:grid; gap:6px; font-size:.86rem; color:var(--suave); }
-  .painel-saude { display:grid; gap:12px; }
   .ponto { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; background:currentColor; }
+  .dois { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 </style>
 </head>
 <body>
@@ -57,8 +62,7 @@
   <div class="barra">
     <h1>Portal de assinaturas</h1>
     <nav aria-label="Principal">
-      <a href="#/clientes" data-rota="clientes">Clientes</a>
-      <a href="#/saude" data-rota="saude">Saúde</a>
+      <a href="#/sistemas" data-rota="sistemas">Sistemas</a>
       <a href="#/mercadopago" data-rota="mercadopago">Mercado Pago</a>
     </nav>
     <button id="sair" class="sec">Sair</button>
@@ -96,6 +100,7 @@
     const e = document.createElement(tag)
     for (const [k, v] of Object.entries(props || {})) {
       if (k === 'class') e.className = v
+      else if (k === 'value') e.value = v
       else if (k.startsWith('on')) e.addEventListener(k.slice(2), v)
       else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v)
     }
@@ -105,6 +110,7 @@
   const aviso = (texto, tipo) => el('div', { class: 'msg ' + (tipo || ''), role: tipo === 'erro' ? 'alert' : 'status' }, texto)
   const dataBr = (iso) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—')
   const dataHoraBr = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR') : '—')
+  const moeda = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   function documentoBr(d) {
     const n = String(d || '').replace(/\D/g, '')
     if (n.length === 14) return n.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
@@ -113,6 +119,24 @@
   }
   const ROTULO_STATUS = { trial: ['Teste', 'aviso'], ativa: ['Ativa', 'ok'], suspensa: ['Suspensa', 'erro'], cancelada: ['Cancelada', 'neutro'] }
   const selo = (status) => { const [t, c] = ROTULO_STATUS[status] || [status, 'neutro']; return el('span', { class: 'selo ' + c }, t) }
+
+  // ícones dos sistemas (cada um escolhido na coluna `icone` da tabela sistemas); traçados fixos, sem conteúdo de terceiros
+  const ICONES = {
+    caminhao: ['M3 7h11v9H3z', 'M14 10h4l3 3v3h-7z', 'M7.5 19a1.8 1.8 0 100-3.6 1.8 1.8 0 000 3.6z', 'M17.5 19a1.8 1.8 0 100-3.6 1.8 1.8 0 000 3.6z'],
+    onibus: ['M4 5h16v12H4z', 'M4 11h16', 'M7 20v-3', 'M17 20v-3', 'M7.5 14h.01', 'M16.5 14h.01'],
+    loja: ['M4 9l1.5-5h13L20 9', 'M4 9h16v11H4z', 'M9 20v-6h6v6'],
+    pessoas: ['M9 11a3 3 0 100-6 3 3 0 000 6z', 'M3 19c0-3 2.7-5 6-5s6 2 6 5', 'M16 11a2.5 2.5 0 100-5', 'M17 14c2.3.3 4 1.9 4 4'],
+    calendario: ['M4 6h16v14H4z', 'M4 10h16', 'M8 3v4', 'M16 3v4'],
+    app: ['M5 5h6v6H5z', 'M13 5h6v6h-6z', 'M5 13h6v6H5z', 'M13 13h6v6h-6z'],
+  }
+  function icone(nome) {
+    const ns = 'http://www.w3.org/2000/svg'
+    const svg = document.createElementNS(ns, 'svg')
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor')
+    svg.setAttribute('stroke-width', '1.6'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round'); svg.setAttribute('aria-hidden', 'true')
+    for (const d of ICONES[nome] || ICONES.app) { const p = document.createElementNS(ns, 'path'); p.setAttribute('d', d); svg.append(p) }
+    return svg
+  }
 
   async function chamar(funcao, corpo) {
     const { data, error } = await banco.functions.invoke(funcao, { body: corpo })
@@ -125,6 +149,7 @@
   }
 
   // ---------- roteamento ----------
+  // #/sistemas  ·  #/s/<codigo>/(clientes|status|planos)  ·  #/mercadopago
   function parar() { if (temporizador) { clearInterval(temporizador); temporizador = null } }
   async function rotear() {
     parar()
@@ -133,40 +158,56 @@
     $('cabecalho').classList.toggle('oculto', !logado)
     $('entrar').classList.toggle('oculto', logado)
     if (!logado) { $('vista').replaceChildren(); return }
-    const partes = (location.hash.replace(/^#\/?/, '') || 'clientes').split('/')
-    const secao = partes[0]
+    const partes = (location.hash.replace(/^#\/?/, '') || 'sistemas').split('/')
+    const secao = partes[0] === 's' ? 'sistemas' : partes[0]
     document.querySelectorAll('nav a').forEach((a) => (a.dataset.rota === secao ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')))
     const vista = $('vista'); vista.replaceChildren(aviso('Carregando…'))
     try {
-      if (secao === 'clientes' && partes[1]) await telaSistema(decodeURIComponent(partes[1]))
-      else if (secao === 'clientes') await telaModulos()
-      else if (secao === 'saude') await telaSaude()
+      if (partes[0] === 's' && partes[1]) await telaSistema(decodeURIComponent(partes[1]), partes[2] || 'clientes')
+      else if (secao === 'sistemas') await telaPrincipal()
       else if (secao === 'mercadopago') await telaMercadoPago()
-      else location.hash = '#/clientes'
+      else location.hash = '#/sistemas'
     } catch (e) { vista.replaceChildren(aviso(e.message, 'erro')) }
   }
   window.addEventListener('hashchange', rotear)
 
-  // ---------- Clientes: um módulo por sistema ----------
-  async function telaModulos() {
+  // ---------- tela principal: uma caixa por sistema ----------
+  async function telaPrincipal() {
     const { sistemas } = await chamar('portal-geral', { acao: 'sistemas' })
     $('vista').replaceChildren(el('div', { class: 'card' },
-      el('h2', {}, 'Clientes'),
-      el('p', { class: 'dica' }, 'Cada sistema é um módulo. Abra um para ver os clientes, o status das assinaturas e gerenciá-las.'),
+      el('h2', {}, 'Sistemas'),
+      el('p', { class: 'dica' }, 'Escolha um sistema para ver os clientes, o status dos serviços e configurar os planos de assinatura.'),
       sistemas.length === 0 ? aviso('Nenhum sistema cadastrado.', 'aviso')
-        : el('div', { class: 'grade' }, sistemas.map((s) => el('button', { class: 'modulo', onclick: () => (location.hash = '#/clientes/' + encodeURIComponent(s.codigo)) }, el('strong', {}, s.nome), el('span', {}, 'Gerenciar assinaturas →'))))))
+        : el('div', { class: 'grade' }, sistemas.map((s) => el('button', { class: 'caixa', onclick: () => (location.hash = '#/s/' + encodeURIComponent(s.codigo) + '/clientes') }, icone(s.icone), el('strong', {}, s.nome))))))
   }
 
-  // ---------- Clientes de um sistema: lista, status e ações ----------
-  async function telaSistema(codigo) {
+  // ---------- um sistema: Clientes · Status dos serviços · Planos ----------
+  async function telaSistema(codigo, aba) {
     const { sistemas } = await chamar('portal-geral', { acao: 'sistemas' })
     const sistema = sistemas.find((s) => s.codigo === codigo)
     if (!sistema) throw new Error('Sistema não encontrado.')
+    const base = '#/s/' + encodeURIComponent(codigo) + '/'
+    const abas = [['clientes', 'Clientes'], ['status', 'Status dos serviços'], ['planos', 'Planos de assinatura']]
+    const conteudo = el('div', { style: 'display:grid;gap:12px' })
+    $('vista').replaceChildren(el('div', { class: 'card' },
+      el('div', { class: 'linha espaco' }, el('div', { class: 'linha' }, icone(sistema.icone), el('h2', {}, sistema.nome)), el('a', { href: '#/sistemas' }, '← Todos os sistemas')),
+      el('nav', { class: 'abas', 'aria-label': 'Áreas do sistema' }, abas.map(([id, rotulo]) => el('a', { href: base + id, ...(id === aba ? { 'aria-current': 'page' } : {}) }, rotulo))),
+      conteudo))
+    if (aba === 'status') await abaStatus(codigo, conteudo)
+    else if (aba === 'planos') await abaPlanos(codigo, conteudo)
+    else await abaClientes(codigo, conteudo)
+  }
+
+  // ----- Clientes -----
+  async function abaClientes(codigo, raiz) {
     const estado = { busca: '', status: '', pagina: 0, total: 0 }
+    let planos = []
+    try { planos = (await chamar('chamar-sistema', { sistema: codigo, acao: 'planos_listar' })).planos } catch (_) {}
     const busca = el('input', { type: 'search', placeholder: 'Nome, fantasia ou CNPJ/CPF', 'aria-label': 'Buscar' })
     const status = el('select', { 'aria-label': 'Situação' }, el('option', { value: '' }, 'Todas as situações'), ...Object.entries(ROTULO_STATUS).map(([v, [t]]) => el('option', { value: v }, t)))
     const caixa = el('div', { class: 'lista' })
     const rodape = el('div', { class: 'linha espaco' })
+    const resultado = el('div', { class: 'oculto' })
     async function carregar() {
       caixa.replaceChildren(aviso('Carregando…'))
       try {
@@ -182,43 +223,55 @@
       } catch (e) { caixa.replaceChildren(aviso(e.message, 'erro')); rodape.replaceChildren() }
     }
     function linhaDaEmpresa(e) {
-      return el('button', { class: 'item', onclick: () => abrirEmpresa(codigo, e, carregar) },
+      return el('button', { class: 'item', onclick: () => abrirEmpresa(codigo, e, planos, carregar) },
         el('div', { class: 'topo' }, el('strong', {}, e.nome_fantasia || e.nome), selo(e.status)),
         el('div', { class: 'meta' },
           el('span', {}, documentoBr(e.documento)),
-          el('span', {}, 'Plano: ' + e.plano_codigo),
+          el('span', {}, 'Plano: ' + nomeDoPlano(planos, e.plano_codigo)),
           e.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(e.trial_ate)) : null,
           el('span', {}, `${e.usuarios} usuário(s) · ${e.veiculos} veículo(s)`),
           e.liberada ? null : el('span', { style: 'color:var(--erro)' }, 'Acesso bloqueado')))
     }
+    const sincronizar = el('button', { class: 'sec', onclick: async () => {
+      sincronizar.disabled = true; resultado.className = 'msg'; resultado.textContent = 'Sincronizando…'
+      try {
+        const r = await chamar('portal-geral', { acao: 'sincronizar', sistema: codigo })
+        resultado.className = 'msg ok'; resultado.textContent = `Sincronizado: ${r.total} empresa(s) no sistema, ${r.criados} nova(s) no portal.`
+      } catch (e) { resultado.className = 'msg erro'; resultado.textContent = e.message }
+      sincronizar.disabled = false
+    } }, 'Sincronizar com o portal')
     let espera
     busca.addEventListener('input', () => { clearTimeout(espera); espera = setTimeout(() => { estado.busca = busca.value.trim(); estado.pagina = 0; carregar() }, 350) })
     status.addEventListener('change', () => { estado.status = status.value; estado.pagina = 0; carregar() })
-    $('vista').replaceChildren(el('div', { class: 'card' },
-      el('div', { class: 'linha espaco' }, el('h2', {}, sistema.nome), el('a', { href: '#/clientes' }, '← Todos os sistemas')),
-      el('div', { class: 'filtros' }, el('label', {}, 'Buscar', busca), el('label', {}, 'Situação', status), el('button', { class: 'sec', onclick: carregar }, 'Atualizar')),
-      caixa, rodape))
+    raiz.replaceChildren(
+      el('p', { class: 'dica' }, 'Quem se cadastra no sistema entra aqui sozinho, com o teste grátis. "Sincronizar" recupera algum cadastro que não tenha chegado.'),
+      el('div', { class: 'filtros' }, el('label', {}, 'Buscar', busca), el('label', {}, 'Situação', status), el('button', { class: 'sec', onclick: carregar }, 'Atualizar'), sincronizar),
+      resultado, caixa, rodape)
     await carregar()
   }
+  const nomeDoPlano = (planos, cod) => { const p = planos.find((x) => x.codigo === cod); return p ? p.nome : cod }
 
-  // ---------- detalhe e ações de uma assinatura ----------
-  function abrirEmpresa(codigo, e, aoMudar) {
+  // ----- detalhe e ações de uma assinatura -----
+  function abrirEmpresa(codigo, e, planos, aoMudar) {
     const dlg = $('dlg'), c = $('dlg-conteudo')
     const resultado = el('div', { class: 'oculto' })
     const motivo = el('input', { maxlength: 300, placeholder: 'Opcional: fica registrado no histórico', 'aria-label': 'Motivo' })
     const dias = el('input', { type: 'number', min: 1, max: 365, value: 7, 'aria-label': 'Dias de teste', style: 'width:90px' })
-    const plano = el('input', { value: e.plano_codigo, maxlength: 40, 'aria-label': 'Código do plano', style: 'width:160px' })
+    const opcoes = planos.filter((p) => p.ativo || p.codigo === e.plano_codigo)
+    const plano = opcoes.length
+      ? el('select', { 'aria-label': 'Plano' }, opcoes.map((p) => el('option', { value: p.codigo, ...(p.codigo === e.plano_codigo ? { selected: true } : {}) }, `${p.nome} (${p.codigo})`)))
+      : el('input', { value: e.plano_codigo, maxlength: 40, 'aria-label': 'Código do plano', style: 'width:160px' })
     const historico = el('div', { class: 'eventos' })
     const atual = { ...e }
 
     function desenhar() {
       c.replaceChildren(
         el('div', { class: 'linha espaco' }, el('h2', {}, atual.nome_fantasia || atual.nome), el('button', { class: 'sec', onclick: () => dlg.close() }, 'Fechar')),
-        el('div', { class: 'meta', style: 'display:grid;gap:2px;color:var(--suave);font-size:.9rem' },
+        el('div', { style: 'display:grid;gap:2px;color:var(--suave);font-size:.9rem' },
           el('span', {}, atual.nome), el('span', {}, documentoBr(atual.documento)),
           atual.email ? el('span', {}, atual.email) : null, atual.telefone ? el('span', {}, atual.telefone) : null,
           el('span', {}, 'Cliente desde ' + dataBr(atual.criada_em))),
-        el('div', { class: 'linha' }, selo(atual.status), el('span', {}, 'Plano: ' + atual.plano_codigo),
+        el('div', { class: 'linha' }, selo(atual.status), el('span', {}, 'Plano: ' + nomeDoPlano(planos, atual.plano_codigo)),
           atual.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(atual.trial_ate)) : null,
           el('span', { style: 'color:' + (atual.liberada ? 'var(--ok)' : 'var(--erro)') }, atual.liberada ? 'Acesso liberado' : 'Acesso bloqueado')),
         el('label', {}, 'Motivo da alteração', motivo),
@@ -258,40 +311,88 @@
     desenhar(); carregarHistorico(); dlg.showModal()
   }
 
-  // ---------- Saúde das comunicações (igual para todos os sistemas) ----------
+  // ----- Status dos serviços (deste sistema) -----
   const ESTADO = { ok: ['Operacional', 'ok'], falha: ['Com falha', 'erro'], nao_configurado: ['Não configurado', 'aviso'] }
-  async function telaSaude() {
-    const cartoes = el('div', { class: 'painel-saude' })
-    const faixa = el('div', {})
-    const historico = el('div', { class: 'eventos' })
+  async function abaStatus(codigo, raiz) {
+    const faixa = el('div', {}), cartoes = el('div', { style: 'display:grid;gap:12px' }), historico = el('div', { class: 'eventos' })
     const botao = el('button', { onclick: verificar }, 'Verificar agora')
     async function verificar() {
-      botao.disabled = true; faixa.replaceChildren(aviso('Verificando as comunicações…'))
+      botao.disabled = true; faixa.replaceChildren(aviso('Verificando…'))
       try {
-        const r = await chamar('portal-geral', { acao: 'saude' })
+        const r = await chamar('portal-geral', { acao: 'saude', sistema: codigo })
         const tudo = r.resumo.falha === 0 && r.resumo.nao_configurado === 0
-        faixa.replaceChildren(aviso(tudo ? 'Todas as comunicações estão operacionais.' : `${r.resumo.falha} com falha, ${r.resumo.nao_configurado} não configurada(s), ${r.resumo.ok} operacional(is).`, r.resumo.falha > 0 ? 'erro' : tudo ? 'ok' : 'aviso'),
+        faixa.replaceChildren(aviso(tudo ? 'Todos os serviços estão operacionais.' : `${r.resumo.falha} com falha, ${r.resumo.nao_configurado} não configurado(s).`, r.resumo.falha > 0 ? 'erro' : tudo ? 'ok' : 'aviso'),
           el('p', { class: 'dica' }, 'Verificado em ' + dataHoraBr(r.verificado_em)))
         cartoes.replaceChildren(...r.itens.map((i) => { const [t, cls] = ESTADO[i.estado]
           return el('div', { class: 'card' },
-            el('div', { class: 'linha espaco' }, el('strong', {}, i.nome), el('span', { class: 'selo ' + cls, style: 'display:inline-flex;align-items:center' }, el('span', { class: 'ponto', 'aria-hidden': 'true' }), t)),
+            el('div', { class: 'linha espaco' }, el('strong', {}, 'Comunicação com a API de assinaturas'), el('span', { class: 'selo ' + cls, style: 'display:inline-flex;align-items:center' }, el('span', { class: 'ponto', 'aria-hidden': 'true' }), t)),
             i.detalhe ? el('p', { class: 'dica' }, i.detalhe) : null,
             i.milissegundos != null ? el('p', { class: 'dica' }, `Resposta em ${i.milissegundos} ms`) : null) }))
-        historico.replaceChildren(...(r.chamadas.length ? r.chamadas.map((l) => el('div', {}, `${dataHoraBr(l.quando)} · ${l.sistema || '—'} · ${l.acao} · ${l.ok ? 'ok' : 'falhou'}`)) : [el('span', {}, 'Sem chamadas registradas.')]))
+        historico.replaceChildren(...(r.chamadas.length ? r.chamadas.map((l) => el('div', {}, `${dataHoraBr(l.quando)} · ${l.acao} · ${l.ok ? 'ok' : 'falhou'}`)) : [el('span', {}, 'Sem chamadas registradas.')]))
       } catch (e) { faixa.replaceChildren(aviso(e.message, 'erro')) }
       botao.disabled = false
     }
-    $('vista').replaceChildren(el('div', { class: 'card' },
-      el('div', { class: 'linha espaco' }, el('h2', {}, 'Saúde das comunicações'), botao),
-      el('p', { class: 'dica' }, 'Testa de verdade o banco do portal, a API de cada sistema e o Mercado Pago. Atualiza sozinho a cada 60 segundos.'),
-      faixa, cartoes, el('h3', {}, 'Últimas chamadas'), historico))
+    raiz.replaceChildren(
+      el('div', { class: 'linha espaco' }, el('h3', {}, 'Status dos serviços'), botao),
+      el('p', { class: 'dica' }, 'Testa de verdade a comunicação do portal com este sistema. Atualiza sozinho a cada 60 segundos.'),
+      faixa, cartoes, el('h3', {}, 'Últimas chamadas'), historico)
     await verificar()
     temporizador = setInterval(() => { if (!botao.disabled) verificar() }, 60000)
   }
 
-  // ---------- Mercado Pago ----------
+  // ----- Planos de assinatura (deste sistema) -----
+  async function abaPlanos(codigo, raiz) {
+    const caixa = el('div', { class: 'lista' })
+    async function carregar() {
+      caixa.replaceChildren(aviso('Carregando…'))
+      try {
+        const r = await chamar('chamar-sistema', { sistema: codigo, acao: 'planos_listar' })
+        caixa.replaceChildren(...(r.planos.length ? r.planos.map((p) => el('button', { class: 'item', onclick: () => editarPlano(codigo, p, carregar) },
+          el('div', { class: 'topo' }, el('strong', {}, p.nome), el('span', { class: 'selo ' + (p.ativo ? 'ok' : 'neutro') }, p.ativo ? 'Ativo' : 'Inativo')),
+          el('div', { class: 'meta' }, el('span', {}, 'Código: ' + p.codigo), el('span', {}, moeda(p.preco_mensal) + '/mês'),
+            el('span', {}, 'Veículos: ' + (p.max_veiculos == null ? 'ilimitado' : p.max_veiculos)), el('span', {}, 'Usuários: ' + (p.max_usuarios == null ? 'ilimitado' : p.max_usuarios)),
+            el('span', {}, `${p.empresas} empresa(s) usando`)))) : [aviso('Nenhum plano.', 'aviso')]))
+      } catch (e) { caixa.replaceChildren(aviso(e.message, 'erro')) }
+    }
+    raiz.replaceChildren(
+      el('div', { class: 'linha espaco' }, el('h3', {}, 'Planos de assinatura'), el('button', { onclick: () => editarPlano(codigo, null, carregar) }, 'Novo plano')),
+      el('p', { class: 'dica' }, 'Os limites e o preço valem dentro do sistema. Um plano em uso não pode ser desativado: troque o plano dos clientes antes.'),
+      caixa)
+    await carregar()
+  }
+  function editarPlano(codigo, p, aoSalvar) {
+    const dlg = $('dlg'), c = $('dlg-conteudo')
+    const novo = !p
+    const f = {
+      codigo: el('input', { value: p ? p.codigo : '', maxlength: 30, ...(novo ? {} : { disabled: true }), placeholder: 'ex.: premium' }),
+      nome: el('input', { value: p ? p.nome : '', maxlength: 60 }),
+      veic: el('input', { type: 'number', min: 1, value: p && p.max_veiculos != null ? p.max_veiculos : '', placeholder: 'vazio = ilimitado' }),
+      usu: el('input', { type: 'number', min: 1, value: p && p.max_usuarios != null ? p.max_usuarios : '', placeholder: 'vazio = ilimitado' }),
+      preco: el('input', { type: 'number', min: 0, step: '0.01', value: p ? p.preco_mensal : 0 }),
+      ativo: el('input', { type: 'checkbox', ...(!p || p.ativo ? { checked: true } : {}) }),
+    }
+    const resultado = el('div', { class: 'oculto' })
+    const salvar = el('button', { type: 'submit' }, 'Salvar')
+    const form = el('form', { style: 'display:grid;gap:12px', onsubmit: async (ev) => {
+      ev.preventDefault(); salvar.disabled = true; resultado.className = 'msg'; resultado.textContent = 'Salvando…'
+      try {
+        await chamar('chamar-sistema', { sistema: codigo, acao: 'plano_salvar', dados: {
+          codigo: f.codigo.value.trim(), nome: f.nome.value.trim(), max_veiculos: f.veic.value === '' ? null : Number(f.veic.value),
+          max_usuarios: f.usu.value === '' ? null : Number(f.usu.value), preco_mensal: f.preco.value === '' ? 0 : Number(f.preco.value), ativo: f.ativo.checked } })
+        dlg.close(); aoSalvar()
+      } catch (e) { resultado.className = 'msg erro'; resultado.textContent = e.message; salvar.disabled = false } } },
+      el('label', {}, 'Código (não muda depois)', f.codigo), el('label', {}, 'Nome do plano', f.nome),
+      el('div', { class: 'dois' }, el('label', {}, 'Máx. de veículos', f.veic), el('label', {}, 'Máx. de usuários', f.usu)),
+      el('label', {}, 'Preço mensal (R$)', f.preco),
+      el('label', { class: 'marca' }, f.ativo, 'Plano ativo (disponível para as empresas)'),
+      el('div', { class: 'linha' }, salvar, el('button', { type: 'button', class: 'sec', onclick: () => dlg.close() }, 'Cancelar')), resultado)
+    c.replaceChildren(el('h2', {}, novo ? 'Novo plano' : 'Editar plano'), form)
+    dlg.showModal()
+  }
+
+  // ---------- Mercado Pago (tela separada: é a mesma para todos os sistemas) ----------
   async function telaMercadoPago() {
-    const ambiente = el('select', { id: 'mp-ambiente' }, el('option', { value: 'teste' }, 'Teste'), el('option', { value: 'producao' }, 'Produção'))
+    const ambiente = el('select', {}, el('option', { value: 'teste' }, 'Teste'), el('option', { value: 'producao' }, 'Produção'))
     const pub = el('input', { autocomplete: 'off', placeholder: 'APP_USR-… ou TEST-…' })
     const tok = el('input', { type: 'password', autocomplete: 'off', placeholder: 'APP_USR-… ou TEST-…' })
     const sec = el('input', { type: 'password', autocomplete: 'off' })
@@ -323,7 +424,7 @@
     }
     $('vista').replaceChildren(el('div', { class: 'card' },
       el('h2', {}, 'Mercado Pago'),
-      el('p', { class: 'dica' }, 'Os dados ficam guardados no servidor do portal. O access token e o segredo do webhook nunca voltam para esta tela: só os 4 últimos caracteres aparecem. Deixe em branco para manter o que já está guardado.'),
+      el('p', { class: 'dica' }, 'Configuração única, usada por todos os sistemas. Os dados ficam guardados no servidor do portal. O access token e o segredo do webhook nunca voltam para esta tela: só os 4 últimos caracteres aparecem. Deixe em branco para manter o que já está guardado.'),
       form, msg, quando))
     preencher((await chamar('config-mercadopago', { acao: 'ler' })).config)
   }

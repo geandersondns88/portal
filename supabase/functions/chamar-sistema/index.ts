@@ -1,9 +1,9 @@
 // Chama a API de assinaturas de um sistema cadastrado em `sistemas` (ex.: Transporte), em nome do administrador logado.
 // A chave de cada sistema fica num segredo desta função, cujo NOME está em sistemas.chave_segredo (PORTAL_KEY_*); nunca vai para a tela.
-// Corpo: { sistema: 'transporte', acao: 'testar' | 'listar' | 'eventos' | 'ativar' | 'suspender' | 'cancelar' | 'estender_teste' | 'trocar_plano', ...campos da ação }
+// Corpo: { sistema: 'transporte', acao: 'testar' | 'listar' | 'eventos' | 'ativar' | 'suspender' | 'cancelar' | 'estender_teste' | 'trocar_plano' | 'planos_listar' | 'plano_salvar', ...campos da ação }
 import { bancoDeServico, exigirAdministrador, responder, respostaOpcoes } from '../_shared/comum.ts'
 
-const ACOES = ['listar', 'eventos', 'ativar', 'suspender', 'cancelar', 'estender_teste', 'trocar_plano']
+const ACOES = ['listar', 'eventos', 'ativar', 'suspender', 'cancelar', 'estender_teste', 'trocar_plano', 'planos_listar', 'plano_salvar']
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return respostaOpcoes()

@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.portal-geral]
 verify_jwt = true
+
+[functions.registrar-cliente]
+verify_jwt = false
