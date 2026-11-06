@@ -13,7 +13,7 @@ import { idDoSistema, registrarEmpresa, validarEmpresa } from '../_shared/regist
 type Dados = Record<string, unknown>
 type Licenca = {
   empresa: { empresa_id: string; nome: string; nome_fantasia: string | null; email: string | null; plano_nome: string | null }
-  licenca: { chave: string; status: string } | null
+  licencas: { chave: string; status: string; limite_computadores: number | null }[]
   limite_computadores: number | null
 }
 
@@ -26,9 +26,13 @@ async function tratar(banco: SupabaseClient, c: Dados): Promise<Response> {
     if (typeof c.empresa_id !== 'string' || !UUID.test(c.empresa_id)) throw new ErroHttp('Empresa inválida.', 400)
     return c.empresa_id.toLowerCase()
   }
-  const enviarPorEmail = async (id: string, lic: Licenca) => {
-    const r = await enviarChave({ para: lic.empresa.email, chave: lic.licenca!.chave, cliente: lic.empresa.nome_fantasia || lic.empresa.nome, plano: lic.empresa.plano_nome, computadores: lic.limite_computadores })
-    if (r.enviado) await rpc(banco, 'gestor_portal_marcar_email', { p_empresa: id })
+  // a empresa pode ter várias chaves: dados.chave escolhe qual; sem ela vale a única (ou erro pedindo para escolher)
+  const chaveDoPedido = (): string | null => texto(dados.chave, 40).toUpperCase().replace(/\s+/g, '') || null
+  const enviarPorEmail = async (id: string, lic: Licenca, chave: string) => {
+    const alvo = lic.licencas.find((l) => l.chave === chave)
+    if (!alvo) throw new ErroHttp('Chave não encontrada nesta empresa.', 404)
+    const r = await enviarChave({ para: lic.empresa.email, chave, cliente: lic.empresa.nome_fantasia || lic.empresa.nome, plano: lic.empresa.plano_nome, computadores: alvo.limite_computadores })
+    if (r.enviado) await rpc(banco, 'gestor_portal_marcar_email', { p_empresa: id, p_chave: chave })
     return r
   }
 
@@ -54,21 +58,28 @@ async function tratar(banco: SupabaseClient, c: Dados): Promise<Response> {
     case 'licenca_ver': return responder({ ok: true, ...(await rpc(banco, 'gestor_portal_licenca', { p_empresa: empresa() })) })
     case 'chave_gerar': case 'chave_reenviar': {
       const id = empresa()
-      const gerada = acao === 'chave_gerar' ? await rpc<{ nova: boolean }>(banco, 'gestor_portal_gerar_chave', { p_empresa: id, p_substituir: dados.substituir === true }) : null
+      // modo (só em chave_gerar): 'se_nao_houver' (padrão), 'adicionar' (mais uma chave) ou 'substituir' (troca a chave dados.chave)
+      const gerada = acao === 'chave_gerar'
+        ? await rpc<{ chave: string; nova: boolean }>(banco, 'gestor_portal_gerar_chave', { p_empresa: id, p_modo: texto(dados.modo, 20) || 'se_nao_houver', p_chave: chaveDoPedido() })
+        : null
       const lic = await rpc<Licenca>(banco, 'gestor_portal_licenca', { p_empresa: id })
-      if (!lic.licenca) throw new ErroHttp('Esta empresa ainda não tem chave.', 404)
-      const email = acao === 'chave_reenviar' || dados.enviar === true ? await enviarPorEmail(id, lic) : { enviado: false, motivo: 'Envio não solicitado.' }
-      return responder({ ok: true, chave: lic.licenca.chave, nova: gerada?.nova ?? false, status: lic.licenca.status, email })
+      const chave = gerada?.chave ?? chaveDoPedido() ?? (lic.licencas.length === 1 ? lic.licencas[0].chave : null)
+      if (!chave) throw new ErroHttp(lic.licencas.length ? 'Esta empresa tem mais de uma chave: escolha qual.' : 'Esta empresa ainda não tem chave.', lic.licencas.length ? 400 : 404)
+      const alvo = lic.licencas.find((l) => l.chave === chave)
+      if (!alvo) throw new ErroHttp('Chave não encontrada nesta empresa.', 404)
+      const email = acao === 'chave_reenviar' || dados.enviar === true ? await enviarPorEmail(id, lic, chave) : { enviado: false, motivo: 'Envio não solicitado.' }
+      return responder({ ok: true, chave, nova: gerada?.nova ?? false, status: alvo.status, email })
     }
     case 'chave_bloquear': case 'chave_desbloquear':
-      return responder({ ok: true, ...(await rpc(banco, 'gestor_portal_bloquear_chave', { p_empresa: empresa(), p_bloquear: acao === 'chave_bloquear', p_motivo: texto(dados.motivo, 300) || null })) })
+      return responder({ ok: true, ...(await rpc(banco, 'gestor_portal_bloquear_chave', { p_empresa: empresa(), p_bloquear: acao === 'chave_bloquear', p_motivo: texto(dados.motivo, 300) || null, p_chave: chaveDoPedido() })) })
     case 'maquina_liberar':
-      return responder({ ok: true, ...(await rpc(banco, 'gestor_portal_liberar_maquina', { p_empresa: empresa(), p_maquina: texto(dados.maquina, 64) })) })
+      return responder({ ok: true, ...(await rpc(banco, 'gestor_portal_liberar_maquina', { p_empresa: empresa(), p_maquina: texto(dados.maquina, 64), p_chave: chaveDoPedido() })) })
     case 'limite_definir': {
+      // sem dados.chave: limite da empresa; com ela: limite só daquela chave
       const bruto = dados.limite
       const limite = bruto === null || bruto === undefined || bruto === '' ? null : Number(bruto)
       if (limite !== null && !Number.isInteger(limite)) throw new ErroHttp('O limite deve ser um número inteiro (ou vazio para seguir o plano).', 400)
-      return responder({ ok: true, ...(await rpc(banco, 'gestor_portal_definir_limite', { p_empresa: empresa(), p_limite: limite })) })
+      return responder({ ok: true, ...(await rpc(banco, 'gestor_portal_definir_limite', { p_empresa: empresa(), p_limite: limite, p_chave: chaveDoPedido() })) })
     }
     case 'vencimento_definir': return responder({ ok: true, assinatura: await rpc(banco, 'gestor_portal_definir_vencimento', { p_empresa: empresa(), p_dados: dados }) })
     case 'recuperacao_gerar': return responder({ ok: true, ...(await rpc(banco, 'gestor_portal_gerar_recuperacao', { p_empresa: empresa() })) })

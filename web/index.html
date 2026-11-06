@@ -208,7 +208,7 @@
     return (ROTULO_SITUACAO[s] || [s || '—'])[0]
   }
   const usoDaEmpresa = (codigo, e) => (codigo === 'gestor'
-    ? `${e.computadores} de ${e.limite_computadores == null ? 'ilimitados' : e.limite_computadores} computador(es)${e.chave ? '' : ' · sem chave'}`
+    ? `${e.computadores} computador(es) · ${e.chaves ? e.chaves + ' chave' + (e.chaves > 1 ? 's' : '') : 'sem chave'}`
     : `${e.usuarios} usuário(s) · ${e.veiculos} veículo(s)`)
   function situacaoDaEmpresa(codigo, e) {
     if (codigo !== 'gestor') return e.liberada ? null : el('span', { style: 'color:var(--erro)' }, 'Acesso bloqueado')
@@ -365,12 +365,35 @@
       catch (err) { painel.replaceChildren(aviso(err.message, 'erro')) }
     }
     function desenharPainel(r) {
-      const s = r.situacao || {}, lic = r.licenca, maquinas = r.maquinas || []
+      const s = r.situacao || {}, licencas = r.licencas || []
       const cls = (ROTULO_SITUACAO[s.estado] || [0, 'neutro'])[1]
       const venc = el('input', { type: 'date', value: r.vencimento || '', 'aria-label': 'Vencimento' })
-      const limite = el('input', { type: 'number', min: 1, max: 1000, placeholder: 'segue o plano', 'aria-label': 'Limite de computadores', style: 'width:130px' })
-      const copiar = async () => {
-        try { await navigator.clipboard.writeText(lic.chave); resultado.className = 'msg ok'; resultado.textContent = 'Chave copiada.' } catch (_) { erroLocal('Não consegui copiar: selecione a chave e copie.') }
+      const copiar = async (chave) => {
+        try { await navigator.clipboard.writeText(chave); resultado.className = 'msg ok'; resultado.textContent = 'Chave copiada.' } catch (_) { erroLocal('Não consegui copiar: selecione a chave e copie.') }
+      }
+      // uma empresa pode ter várias chaves; cada uma com os seus computadores e o seu limite
+      const blocoChave = (lic, n) => {
+        const limite = el('input', { type: 'number', min: 1, max: 1000, placeholder: 'segue o plano', 'aria-label': 'Limite de computadores', style: 'width:130px' })
+        const ms = lic.maquinas || []
+        const dela = { chave: lic.chave }
+        return el('div', { class: 'card', style: 'padding:10px' },
+          el('strong', {}, licencas.length > 1 ? `Chave ${n + 1} de ${licencas.length}` : 'Chave de licença'),
+          el('div', { class: 'linha' }, el('code', { style: 'font-size:1rem;font-weight:700;word-break:break-all' }, lic.chave),
+            el('span', { class: 'selo ' + (lic.status === 'ativa' ? 'ok' : 'erro') }, lic.status === 'ativa' ? 'Ativa' : 'Bloqueada')),
+          el('p', { class: 'dica' }, lic.email_enviado_em ? 'Enviada por e-mail em ' + dataHoraBr(lic.email_enviado_em) : 'Ainda não enviada por e-mail.'),
+          el('div', { class: 'linha' },
+            el('button', { class: 'sec', onclick: () => copiar(lic.chave) }, 'Copiar'),
+            el('button', { class: 'sec', onclick: () => acaoGestor('chave_reenviar', dela, `Enviar esta chave para ${r.empresa.email || 'a empresa'}?`, msgChave) }, 'Enviar por e-mail'),
+            lic.status === 'ativa' ? el('button', { class: 'perigo', onclick: () => acaoGestor('chave_bloquear', dela, 'Bloquear esta chave? Os computadores dela deixam de validar.') }, 'Bloquear')
+              : el('button', { class: 'sec', onclick: () => acaoGestor('chave_desbloquear', dela) }, 'Desbloquear'),
+            el('button', { class: 'perigo', onclick: () => acaoGestor('chave_gerar', { modo: 'substituir', chave: lic.chave }, 'Trocar esta chave por uma NOVA? A atual deixa de valer e os computadores dela precisam ativar de novo.', msgChave) }, 'Nova chave')),
+          el('strong', {}, `Computadores (${ms.length} de ${lic.limite_computadores == null ? 'ilimitados' : lic.limite_computadores})`),
+          ...(ms.length ? ms.map((m) => el('div', { class: 'linha espaco' },
+            el('span', { class: 'dica' }, `${m.nome || 'sem nome'} · versão ${m.versao || '?'} · ativado em ${dataBr(m.ativada_em)} · último contato ${m.ultimo_contato ? dataHoraBr(m.ultimo_contato) : '—'}`),
+            el('button', { class: 'sec', onclick: () => acaoGestor('maquina_liberar', { ...dela, maquina: m.maquina }, `Liberar ${m.nome || 'este computador'}? Ele precisará ativar de novo com a chave.`) }, 'Liberar')))
+            : [el('span', { class: 'dica' }, 'Nenhum computador ativado ainda.')]),
+          el('div', { class: 'linha' }, el('label', {}, 'Limite desta chave (vazio = segue o plano)', limite),
+            el('button', { class: 'sec', onclick: () => acaoGestor('limite_definir', { ...dela, limite: limite.value === '' ? null : Number(limite.value) }) }, 'Definir')))
       }
       painel.replaceChildren(
         el('div', { class: 'linha espaco' }, el('h3', {}, 'Gestor+ · licença'), el('span', { class: 'selo ' + cls }, textoSituacao(s.estado, s.dias))),
@@ -382,32 +405,17 @@
           el('button', { class: 'sec', onclick: () => acaoGestor('vencimento_definir', { data: null }, 'Remover o vencimento? O acesso passa a não vencer.') }, 'Sem vencimento')) : null,
         el('p', { class: 'dica' }, 'Com cobranças emitidas pelo portal, a cobrança em aberto manda no vencimento; sem elas vale a data acima.'),
 
-        el('h3', {}, 'Chave de licença'),
-        lic ? el('div', { class: 'linha' }, el('code', { style: 'font-size:1rem;font-weight:700;word-break:break-all' }, lic.chave),
-          el('span', { class: 'selo ' + (lic.status === 'ativa' ? 'ok' : 'erro') }, lic.status === 'ativa' ? 'Ativa' : 'Bloqueada')) : aviso('Esta empresa ainda não tem chave.', 'aviso'),
-        lic ? el('p', { class: 'dica' }, lic.email_enviado_em ? 'Enviada por e-mail em ' + dataHoraBr(lic.email_enviado_em) : 'Ainda não enviada por e-mail.') : null,
-        el('div', { class: 'linha' }, ...(lic ? [
-          el('button', { class: 'sec', onclick: copiar }, 'Copiar'),
-          el('button', { class: 'sec', onclick: () => acaoGestor('chave_reenviar', {}, `Enviar a chave para ${r.empresa.email || 'a empresa'}?`, msgChave) }, 'Enviar por e-mail'),
-          lic.status === 'ativa' ? el('button', { class: 'perigo', onclick: () => acaoGestor('chave_bloquear', {}, 'Bloquear a chave? O Gestor+ deste cliente deixa de validar.') }, 'Bloquear')
-            : el('button', { class: 'sec', onclick: () => acaoGestor('chave_desbloquear', {}) }, 'Desbloquear'),
-          el('button', { class: 'perigo', onclick: () => acaoGestor('chave_gerar', { substituir: true }, 'Gerar uma NOVA chave? A atual deixa de valer e os computadores precisam ativar de novo.', msgChave) }, 'Nova chave'),
+        ...(licencas.length ? licencas.map(blocoChave) : [el('h3', {}, 'Chave de licença'), aviso('Esta empresa ainda não tem chave.', 'aviso')]),
+        el('div', { class: 'linha' }, ...(licencas.length ? [
+          el('button', { class: 'sec', onclick: () => acaoGestor('chave_gerar', { modo: 'adicionar' }, 'Gerar mais uma chave para esta empresa?', msgChave) }, 'Adicionar outra chave'),
         ] : [
           el('button', { onclick: () => acaoGestor('chave_gerar', { enviar: true }, `Gerar a chave e enviar para ${r.empresa.email || 'o e-mail da empresa'}?`, msgChave) }, 'Gerar e enviar por e-mail'),
           el('button', { class: 'sec', onclick: () => acaoGestor('chave_gerar', {}, null, msgChave) }, 'Só gerar'),
         ])),
 
-        el('h3', {}, `Computadores (${maquinas.length} de ${r.limite_computadores == null ? 'ilimitados' : r.limite_computadores})`),
-        ...(maquinas.length ? maquinas.map((m) => el('div', { class: 'linha espaco' },
-          el('span', { class: 'dica' }, `${m.nome || 'sem nome'} · versão ${m.versao || '?'} · ativado em ${dataBr(m.ativada_em)} · último contato ${m.ultimo_contato ? dataHoraBr(m.ultimo_contato) : '—'}`),
-          el('button', { class: 'sec', onclick: () => acaoGestor('maquina_liberar', { maquina: m.maquina }, `Liberar ${m.nome || 'este computador'}? Ele precisará ativar de novo com a chave.`) }, 'Liberar')))
-          : [el('span', { class: 'dica' }, 'Nenhum computador ativado ainda.')]),
-        el('div', { class: 'linha' }, el('label', {}, 'Limite de computadores (vazio = segue o plano)', limite),
-          el('button', { class: 'sec', onclick: () => acaoGestor('limite_definir', { limite: limite.value === '' ? null : Number(limite.value) }) }, 'Definir')),
-
         el('h3', {}, 'Recuperação de acesso'),
         el('p', { class: 'dica' }, 'Para quando o cliente esquece a senha do administrador do Gestor+: o código vale 24 horas e só pode ser usado uma vez.'),
-        el('div', { class: 'linha' }, el('button', { class: 'sec', disabled: !lic, onclick: () => acaoGestor('recuperacao_gerar', {}, 'Gerar um código de recuperação do administrador?', (x) => `Código: ${x.codigo} (válido até ${dataHoraBr(x.expira_em)})`) }, 'Gerar código')))
+        el('div', { class: 'linha' }, el('button', { class: 'sec', disabled: !licencas.length, onclick: () => acaoGestor('recuperacao_gerar', {}, 'Gerar um código de recuperação do administrador?', (x) => `Código: ${x.codigo} (válido até ${dataHoraBr(x.expira_em)})`) }, 'Gerar código')))
     }
     desenhar(); carregarHistorico(); carregarPainel(); dlg.showModal()
   }
