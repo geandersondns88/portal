@@ -55,6 +55,27 @@
   .eventos { display:grid; gap:6px; font-size:.86rem; color:var(--suave); }
   .ponto { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; background:currentColor; }
   .dois { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  /* janela da empresa: larga, em duas colunas (cadastro/assinatura | licença do aplicativo) */
+  dialog.largo { width:min(1080px, calc(100vw - 24px)); }
+  dialog.largo .conteudo { padding:22px 24px; gap:16px; max-height:92vh; }
+  .cab { align-items:flex-start; }
+  .cab h2 { font-size:1.35rem; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; }
+  .tile { border:1px solid var(--borda); border-radius:12px; padding:10px 14px; display:grid; gap:4px; align-content:start; background:var(--fundo); }
+  .tile small { color:var(--suave); font-size:.74rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+  .tile strong { font-size:1.05rem; }
+  .colunas { display:grid; gap:16px; grid-template-columns:minmax(0, 1fr); align-items:start; }
+  @media (min-width:860px) { .colunas.duas { grid-template-columns:minmax(0, 5fr) minmax(0, 7fr); } }
+  .coluna { display:grid; gap:16px; min-width:0; }
+  .colunas:not(.duas) .coluna { grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); align-items:start; }
+  .secao { border:1px solid var(--borda); border-radius:12px; padding:14px 16px; display:grid; gap:12px; min-width:0; }
+  .secao > h3 { font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(--suave); }
+  .dados { display:grid; grid-template-columns:110px minmax(0, 1fr); gap:8px 14px; margin:0; font-size:.93rem; }
+  .dados dt { color:var(--suave); } .dados dd { margin:0; word-break:break-word; }
+  .bloco { border:1px solid var(--borda); border-radius:12px; padding:12px 14px; display:grid; gap:10px; background:var(--fundo); min-width:0; }
+  .chave { font:600 1.02rem ui-monospace, Consolas, monospace; letter-spacing:.03em; background:var(--card); border:1px solid var(--borda); border-radius:8px; padding:6px 10px; word-break:break-all; }
+  .pc { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 12px; padding:8px 12px; border:1px solid var(--borda); border-radius:8px; background:var(--card); }
+  .eventos div { padding:6px 0; border-bottom:1px solid var(--borda); } .eventos div:last-child { border-bottom:0; }
 </style>
 </head>
 <body>
@@ -292,28 +313,49 @@
       : el('input', { value: e.plano_codigo, maxlength: 40, 'aria-label': 'Código do plano', style: 'width:160px' })
     const historico = el('div', { class: 'eventos' })
     const atual = { ...e }
-    const painel = codigo === 'gestor' ? el('div', { class: 'card', style: 'padding:12px' }, aviso('Carregando a licença…')) : null
+    const painel = codigo === 'gestor' ? el('section', { class: 'secao' }, aviso('Carregando a licença…')) : null
+    const tiles = el('div', { class: 'tiles' })
+
+    // resumo em cartões no topo (o do Gestor+ mostra a situação da assinatura; os outros sistemas, o acesso)
+    function desenharTiles() {
+      const gestor = codigo === 'gestor'
+      const cartao = (rotulo, conteudo) => el('div', { class: 'tile' }, el('small', {}, rotulo), conteudo)
+      const clsAcesso = gestor && atual.situacao ? (ROTULO_SITUACAO[atual.situacao] || [0, 'neutro'])[1] : (atual.liberada ? 'ok' : 'erro')
+      const corAcesso = 'var(--' + (clsAcesso === 'ok' ? 'ok' : clsAcesso === 'erro' ? 'erro' : clsAcesso === 'aviso' ? 'aviso' : 'suave') + ')'
+      const textoAcesso = gestor ? (atual.situacao ? textoSituacao(atual.situacao, atual.dias) : (atual.liberada ? 'Uso liberado' : 'Somente leitura')) : (atual.liberada ? 'Acesso liberado' : 'Acesso bloqueado')
+      const dataFim = atual.status === 'trial' ? atual.trial_ate : gestor ? atual.vencimento : null
+      tiles.replaceChildren(
+        cartao('Assinatura', selo(atual.status)),
+        cartao('Plano', el('strong', {}, nomeDoPlano(planos, atual.plano_codigo))),
+        cartao(atual.status === 'trial' ? 'Teste até' : 'Vencimento', el('strong', {}, dataFim ? dataBr(dataFim) : atual.status === 'trial' ? 'Aguardando liberação' : 'Sem vencimento')),
+        cartao('Acesso', el('strong', { style: 'color:' + corAcesso }, textoAcesso)),
+        gestor ? cartao('Computadores', el('strong', {}, `${atual.computadores ?? 0} · ${atual.chaves ?? 0} chave${atual.chaves === 1 ? '' : 's'}`)) : cartao('Uso', el('strong', {}, usoDaEmpresa(codigo, atual))))
+    }
+    const dado = (rotulo, valor) => [el('dt', {}, rotulo), el('dd', {}, valor)]
 
     function desenhar() {
+      desenharTiles()
       c.replaceChildren(
-        el('div', { class: 'linha espaco' }, el('h2', {}, atual.nome_fantasia || atual.nome), el('button', { class: 'sec', onclick: () => dlg.close() }, 'Fechar')),
-        el('div', { style: 'display:grid;gap:2px;color:var(--suave);font-size:.9rem' },
-          el('span', {}, atual.nome), el('span', {}, 'CNPJ/CPF: ' + documentoBr(atual.documento)),
-          el('span', {}, 'E-mail: ' + (atual.email || '—')), el('span', {}, 'Telefone: ' + (atual.telefone || '—')),
-          el('span', {}, 'Cliente desde ' + dataBr(atual.criada_em))),
-        el('div', { class: 'linha' }, selo(atual.status), el('span', {}, 'Plano: ' + nomeDoPlano(planos, atual.plano_codigo)),
-          atual.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(atual.trial_ate)) : null,
-          el('span', { style: 'color:' + (atual.liberada ? 'var(--ok)' : 'var(--erro)') }, codigo === 'gestor' ? (atual.liberada ? 'Uso liberado' : 'Somente leitura') : (atual.liberada ? 'Acesso liberado' : 'Acesso bloqueado'))),
-        el('label', {}, 'Motivo da alteração', motivo),
-        el('div', { class: 'linha' },
-          el('button', { onclick: () => agir('ativar', {}, 'Ativar esta assinatura?') }, 'Ativar'),
-          el('button', { class: 'perigo', onclick: () => agir('suspender', {}, 'Suspender? O acesso da empresa será bloqueado.') }, 'Suspender'),
-          el('button', { class: 'perigo', onclick: () => agir('cancelar', {}, 'Cancelar esta assinatura?') }, 'Cancelar')),
-        el('div', { class: 'linha' }, el('label', {}, 'Estender teste (dias)', dias), el('button', { class: 'sec', onclick: () => agir('estender_teste', { dias: Number(dias.value) }) }, 'Estender')),
-        el('div', { class: 'linha' }, el('label', {}, 'Plano', plano), el('button', { class: 'sec', onclick: () => agir('trocar_plano', { plano_codigo: plano.value.trim() }, 'Trocar o plano?') }, 'Trocar plano')),
+        el('div', { class: 'linha espaco cab' },
+          el('div', {}, el('h2', {}, atual.nome_fantasia || atual.nome), el('p', { class: 'dica' }, [atual.nome_fantasia ? atual.nome : null, documentoBr(atual.documento)].filter(Boolean).join(' · '))),
+          el('button', { class: 'sec', onclick: () => dlg.close() }, 'Fechar')),
         resultado,
-        painel,
-        el('h3', {}, 'Histórico'), historico)
+        tiles,
+        el('div', { class: 'colunas' + (painel ? ' duas' : '') },
+          el('div', { class: 'coluna' },
+            el('section', { class: 'secao' }, el('h3', {}, 'Cadastro'),
+              el('dl', { class: 'dados' }, ...dado('Razão social', atual.nome), ...dado('CNPJ/CPF', documentoBr(atual.documento)), ...dado('E-mail', atual.email || '—'),
+                ...dado('Telefone', atual.telefone || '—'), ...dado('Cliente desde', dataBr(atual.criada_em)))),
+            el('section', { class: 'secao' }, el('h3', {}, 'Assinatura'),
+              el('label', {}, 'Motivo da alteração', motivo),
+              el('div', { class: 'linha' },
+                el('button', { onclick: () => agir('ativar', {}, 'Ativar esta assinatura?') }, 'Ativar'),
+                el('button', { class: 'perigo', onclick: () => agir('suspender', {}, 'Suspender? O acesso da empresa será bloqueado.') }, 'Suspender'),
+                el('button', { class: 'perigo', onclick: () => agir('cancelar', {}, 'Cancelar esta assinatura?') }, 'Cancelar')),
+              el('div', { class: 'linha' }, el('label', {}, 'Estender teste (dias)', dias), el('button', { class: 'sec', onclick: () => agir('estender_teste', { dias: Number(dias.value) }) }, 'Estender')),
+              el('div', { class: 'linha' }, el('label', {}, 'Plano', plano), el('button', { class: 'sec', onclick: () => agir('trocar_plano', { plano_codigo: plano.value.trim() }, 'Trocar o plano?') }, 'Trocar plano')))),
+          painel ? el('div', { class: 'coluna' }, painel) : null),
+        el('section', { class: 'secao' }, el('h3', {}, 'Histórico'), historico))
     }
     async function agir(acao, dados, confirmacao) {
       if (confirmacao && !confirm(confirmacao)) return
@@ -366,6 +408,9 @@
     }
     function desenharPainel(r) {
       const s = r.situacao || {}, licencas = r.licencas || []
+      // mantém o resumo do topo em dia com o que o servidor acabou de dizer
+      Object.assign(atual, { situacao: s.estado, dias: s.dias, vencimento: r.vencimento, chaves: licencas.length, computadores: licencas.reduce((n, l) => n + (l.maquinas || []).length, 0) })
+      desenharTiles()
       const cls = (ROTULO_SITUACAO[s.estado] || [0, 'neutro'])[1]
       const venc = el('input', { type: 'date', value: r.vencimento || '', 'aria-label': 'Vencimento' })
       const copiar = async (chave) => {
@@ -376,9 +421,9 @@
         const limite = el('input', { type: 'number', min: 1, max: 1000, placeholder: 'segue o plano', 'aria-label': 'Limite de computadores', style: 'width:130px' })
         const ms = lic.maquinas || []
         const dela = { chave: lic.chave }
-        return el('div', { class: 'card', style: 'padding:10px' },
+        return el('div', { class: 'bloco' },
           el('strong', {}, licencas.length > 1 ? `Chave ${n + 1} de ${licencas.length}` : 'Chave de licença'),
-          el('div', { class: 'linha' }, el('code', { style: 'font-size:1rem;font-weight:700;word-break:break-all' }, lic.chave),
+          el('div', { class: 'linha' }, el('code', { class: 'chave' }, lic.chave),
             el('span', { class: 'selo ' + (lic.status === 'ativa' ? 'ok' : 'erro') }, lic.status === 'ativa' ? 'Ativa' : 'Bloqueada')),
           el('p', { class: 'dica' }, lic.email_enviado_em ? 'Enviada por e-mail em ' + dataHoraBr(lic.email_enviado_em) : 'Ainda não enviada por e-mail.'),
           el('div', { class: 'linha' },
@@ -388,7 +433,7 @@
               : el('button', { class: 'sec', onclick: () => acaoGestor('chave_desbloquear', dela) }, 'Desbloquear'),
             el('button', { class: 'perigo', onclick: () => acaoGestor('chave_gerar', { modo: 'substituir', chave: lic.chave }, 'Trocar esta chave por uma NOVA? A atual deixa de valer e os computadores dela precisam ativar de novo.', msgChave) }, 'Nova chave')),
           el('strong', {}, `Computadores (${ms.length} de ${lic.limite_computadores == null ? 'ilimitados' : lic.limite_computadores})`),
-          ...(ms.length ? ms.map((m) => el('div', { class: 'linha espaco' },
+          ...(ms.length ? ms.map((m) => el('div', { class: 'pc' },
             el('span', { class: 'dica' }, `${m.nome || 'sem nome'} · versão ${m.versao || '?'} · ativado em ${dataBr(m.ativada_em)} · último contato ${m.ultimo_contato ? dataHoraBr(m.ultimo_contato) : '—'}`),
             el('button', { class: 'sec', onclick: () => acaoGestor('maquina_liberar', { ...dela, maquina: m.maquina }, `Liberar ${m.nome || 'este computador'}? Ele precisará ativar de novo com a chave.`) }, 'Liberar')))
             : [el('span', { class: 'dica' }, 'Nenhum computador ativado ainda.')]),
@@ -417,6 +462,8 @@
         el('p', { class: 'dica' }, 'Para quando o cliente esquece a senha do administrador do Gestor+: o código vale 24 horas e só pode ser usado uma vez.'),
         el('div', { class: 'linha' }, el('button', { class: 'sec', disabled: !licencas.length, onclick: () => acaoGestor('recuperacao_gerar', {}, 'Gerar um código de recuperação do administrador?', (x) => `Código: ${x.codigo} (válido até ${dataHoraBr(x.expira_em)})`) }, 'Gerar código')))
     }
+    dlg.classList.add('largo')
+    if (!dlg.dataset.fechaFora) { dlg.dataset.fechaFora = '1'; dlg.addEventListener('click', (ev) => { if (ev.target === dlg) dlg.close() }) } // clicar fora fecha
     desenhar(); carregarHistorico(); carregarPainel(); dlg.showModal()
   }
 
@@ -481,6 +528,7 @@
   }
   function editarPlano(codigo, p, aoSalvar) {
     const dlg = $('dlg'), c = $('dlg-conteudo')
+    dlg.classList.remove('largo')
     const novo = !p
     const f = {
       codigo: el('input', { value: p ? p.codigo : '', maxlength: 30, ...(novo ? {} : { disabled: true }), placeholder: 'ex.: premium' }),
