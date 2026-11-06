@@ -62,3 +62,18 @@ O workflow `.github/workflows/publicar.yml` publica `web/` no site `gdns88` (pro
 
 As funções e migrations foram aplicadas no projeto Portal pelo painel/MCP do Supabase. Para reaplicar com a CLI: `supabase functions deploy chamar-sistema`,
 `supabase functions deploy portal-geral` e `supabase functions deploy config-mercadopago` (com verificação de JWT ligada) e `supabase functions deploy registrar-cliente --no-verify-jwt`, e `supabase db push` ou colar as migrations no SQL Editor.
+
+## Gestor+ (licença do aplicativo)
+
+O Gestor+ é um aplicativo de computador (Electron) vendido por assinatura. A licença e a assinatura dele são controladas aqui; o aplicativo guarda os dados do cliente só no computador do cliente.
+
+- **Banco:** esquema `gestor` (migration `004_gestor.sql`), isolado e sem acesso direto: só as Edge Functions, por funções SQL `public.gestor_*` (só o `service_role` executa).
+- **`gestor-assinaturas`** (sem JWT, chave `PORTAL_KEY_GESTOR` no cabeçalho `x-portal-key`): o mesmo contrato dos outros sistemas, mais `licenca_ver`, `chave_gerar`, `chave_reenviar`, `chave_bloquear`, `chave_desbloquear`,
+  `maquina_liberar`, `limite_definir`, `vencimento_definir`, `recuperacao_gerar` (a tela chama pelo `chamar-sistema`) e `atualizacao_publicar` e `importar` (só por script, com a chave).
+- **`gestor-licenca`** (pública; limite de tentativas por IP): `ativar`, `validar`, `solicitar`, `atualizacao`, `recuperar` e `chave_publica`. Devolve a licença **assinada (Ed25519)**; o aplicativo confere com a chave pública embutida e funciona até 30 dias sem internet.
+- **Regra de assinatura:** em dia → aviso nos 7 dias antes de vencer → carência de 7 dias depois do vencimento → **somente leitura**. Suspensa ou cancelada vai direto para somente leitura; cadastro novo fica "aguardando liberação" (leitura) até alguém liberar.
+  O vencimento vem do fim do teste, das cobranças do portal (quando existirem) ou da data definida à mão (`vencimento_definir`; sem data o acesso não vence). Os 7 e 7 dias ficam em `gestor.config`.
+- **Tela:** ao abrir uma empresa do Gestor+ aparece o painel de licença (situação, vencimento, chave, computadores ativados, limite e código de recuperação). Planos usam "máx. de computadores".
+- **Instalador:** fica no site de Hosting `gestormais-gdns88` (mesmo projeto `gdns88`, separado deste site porque cada publicação substitui o site inteiro), publicado pelo `npm run publicar` do repositório do Gestor+.
+
+Segredos (além de `PORTAL_KEY_TRANSPORTE`): `PORTAL_KEY_GESTOR` (24+ caracteres), `GESTOR_EMAIL_URL` e `GESTOR_EMAIL_SEGREDO` (envio da chave por e-mail via Google Apps Script).

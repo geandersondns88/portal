@@ -93,3 +93,11 @@ export async function registrarEmpresa(banco: SupabaseClient, sistemaId: string,
   }
   return { criado: true }
 }
+
+/** Id do sistema Gestor+ na tabela `sistemas` do portal. */
+export async function idDoSistema(banco: SupabaseClient): Promise<string> {
+  const { data, error } = await banco.from('sistemas').select('id').eq('codigo', 'gestor').maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error('O sistema "gestor" ainda não está cadastrado no portal.')
+  return data.id
+}

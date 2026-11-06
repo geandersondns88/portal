@@ -11,3 +11,9 @@ verify_jwt = true
 
 [functions.registrar-cliente]
 verify_jwt = false
+
+[functions.gestor-assinaturas]
+verify_jwt = false
+
+[functions.gestor-licenca]
+verify_jwt = false

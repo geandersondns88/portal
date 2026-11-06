@@ -198,6 +198,34 @@
     else await abaClientes(codigo, conteudo)
   }
 
+  // Sistemas com licença de aplicativo (Gestor+): o uso é medido em computadores e, vencida a carência, o sistema vira somente leitura (não "bloqueia").
+  const ROTULO_SITUACAO = { ok: ['Em dia', 'ok'], aviso: ['Vencimento próximo', 'aviso'], carencia: ['Vencida (em carência)', 'aviso'], somente_leitura: ['Somente leitura', 'erro'], aguardando: ['Aguardando liberação', 'aviso'] }
+  const diasTxt = (n) => `${n} dia${n === 1 ? '' : 's'}`
+  function textoSituacao(s, dias) {
+    if (s === 'aviso') return dias === 0 ? 'Vence hoje' : 'Vence em ' + diasTxt(dias)
+    if (s === 'carencia') return `Vencida: restam ${diasTxt(dias)} de carência`
+    if (s === 'somente_leitura') return dias != null ? `Somente leitura (${diasTxt(dias)} de atraso)` : 'Somente leitura'
+    return (ROTULO_SITUACAO[s] || [s || '—'])[0]
+  }
+  const usoDaEmpresa = (codigo, e) => (codigo === 'gestor'
+    ? `${e.computadores} de ${e.limite_computadores == null ? 'ilimitados' : e.limite_computadores} computador(es)${e.chave ? '' : ' · sem chave'}`
+    : `${e.usuarios} usuário(s) · ${e.veiculos} veículo(s)`)
+  function situacaoDaEmpresa(codigo, e) {
+    if (codigo !== 'gestor') return e.liberada ? null : el('span', { style: 'color:var(--erro)' }, 'Acesso bloqueado')
+    const cls = (ROTULO_SITUACAO[e.situacao] || [0, 'neutro'])[1]
+    return cls === 'ok' ? null : el('span', { style: 'color:var(--' + (cls === 'erro' ? 'erro' : 'aviso') + ')' }, textoSituacao(e.situacao, e.dias))
+  }
+  const ROTULO_ACAO = { chave_gerada: 'Chave gerada', chave_substituida: 'Chave substituída', chave_bloqueada: 'Chave bloqueada', chave_desbloqueada: 'Chave desbloqueada', computador_ativado: 'Computador ativado', computador_liberado: 'Computador liberado',
+    limite_definido: 'Limite de computadores', vencimento_definido: 'Vencimento', recuperacao_gerada: 'Código de recuperação gerado', recuperacao_usada: 'Código de recuperação usado', cadastro: 'Pedido de licença', importada: 'Importada' }
+  function textoEvento(ev) {
+    const a = ev.anterior, d = ev.depois
+    let mud = ''
+    if (a && d && a.status !== undefined && d.status !== undefined) mud = ` (${a.status} → ${d.status})`
+    else if (a && d && 'vencimento' in d) mud = ` (${dataBr(a.vencimento)} → ${d.vencimento ? dataBr(d.vencimento) : 'sem vencimento'})`
+    else if (a && d && 'limite' in d) mud = ` (${a.limite == null ? 'plano' : a.limite} → ${d.limite == null ? 'plano' : d.limite})`
+    return `${dataHoraBr(ev.criado_em)} · ${ROTULO_ACAO[ev.acao] || ev.acao}${mud}${ev.detalhes && ev.detalhes.motivo ? ' · ' + ev.detalhes.motivo : ''}${ev.detalhes && ev.detalhes.nome ? ' · ' + ev.detalhes.nome : ''}`
+  }
+
   // ----- Clientes -----
   async function abaClientes(codigo, raiz) {
     const estado = { busca: '', status: '', pagina: 0, total: 0 }
@@ -230,8 +258,8 @@
           e.email ? el('span', {}, e.email) : null,
           el('span', {}, 'Plano: ' + nomeDoPlano(planos, e.plano_codigo)),
           e.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(e.trial_ate)) : null,
-          el('span', {}, `${e.usuarios} usuário(s) · ${e.veiculos} veículo(s)`),
-          e.liberada ? null : el('span', { style: 'color:var(--erro)' }, 'Acesso bloqueado')))
+          el('span', {}, usoDaEmpresa(codigo, e)),
+          situacaoDaEmpresa(codigo, e)))
     }
     const sincronizar = el('button', { class: 'sec', onclick: async () => {
       sincronizar.disabled = true; resultado.className = 'msg'; resultado.textContent = 'Sincronizando…'
@@ -264,6 +292,7 @@
       : el('input', { value: e.plano_codigo, maxlength: 40, 'aria-label': 'Código do plano', style: 'width:160px' })
     const historico = el('div', { class: 'eventos' })
     const atual = { ...e }
+    const painel = codigo === 'gestor' ? el('div', { class: 'card', style: 'padding:12px' }, aviso('Carregando a licença…')) : null
 
     function desenhar() {
       c.replaceChildren(
@@ -274,7 +303,7 @@
           el('span', {}, 'Cliente desde ' + dataBr(atual.criada_em))),
         el('div', { class: 'linha' }, selo(atual.status), el('span', {}, 'Plano: ' + nomeDoPlano(planos, atual.plano_codigo)),
           atual.status === 'trial' ? el('span', {}, 'Teste até ' + dataBr(atual.trial_ate)) : null,
-          el('span', { style: 'color:' + (atual.liberada ? 'var(--ok)' : 'var(--erro)') }, atual.liberada ? 'Acesso liberado' : 'Acesso bloqueado')),
+          el('span', { style: 'color:' + (atual.liberada ? 'var(--ok)' : 'var(--erro)') }, codigo === 'gestor' ? (atual.liberada ? 'Uso liberado' : 'Somente leitura') : (atual.liberada ? 'Acesso liberado' : 'Acesso bloqueado'))),
         el('label', {}, 'Motivo da alteração', motivo),
         el('div', { class: 'linha' },
           el('button', { onclick: () => agir('ativar', {}, 'Ativar esta assinatura?') }, 'Ativar'),
@@ -283,6 +312,7 @@
         el('div', { class: 'linha' }, el('label', {}, 'Estender teste (dias)', dias), el('button', { class: 'sec', onclick: () => agir('estender_teste', { dias: Number(dias.value) }) }, 'Estender')),
         el('div', { class: 'linha' }, el('label', {}, 'Plano', plano), el('button', { class: 'sec', onclick: () => agir('trocar_plano', { plano_codigo: plano.value.trim() }, 'Trocar o plano?') }, 'Trocar plano')),
         resultado,
+        painel,
         el('h3', {}, 'Histórico'), historico)
     }
     async function agir(acao, dados, confirmacao) {
@@ -296,7 +326,7 @@
         const guardados = { motivo: motivo.value, dias: dias.value, plano: plano.value }
         desenhar(); motivo.value = guardados.motivo; dias.value = guardados.dias; plano.value = guardados.plano
         resultado.className = 'msg ok'; resultado.textContent = 'Alteração feita.'
-        aoMudar(); carregarHistorico()
+        aoMudar(); carregarHistorico(); carregarPainel()
       } catch (err) {
         botoes.forEach((b) => (b.disabled = false))
         resultado.className = 'msg erro'; resultado.textContent = err.message
@@ -305,11 +335,81 @@
     async function carregarHistorico() {
       try {
         const r = await chamar('chamar-sistema', { sistema: codigo, acao: 'eventos', empresa_id: atual.empresa_id, limite: 10 })
-        historico.replaceChildren(...(r.eventos.length ? r.eventos.map((ev) => el('div', {},
-          `${dataHoraBr(ev.criado_em)} · ${ev.acao}${ev.anterior && ev.depois ? ` (${ev.anterior.status} → ${ev.depois.status})` : ''}${ev.detalhes && ev.detalhes.motivo ? ' · ' + ev.detalhes.motivo : ''}`)) : [el('span', {}, 'Nenhuma alteração feita pelo portal ainda.')]))
+        historico.replaceChildren(...(r.eventos.length ? r.eventos.map((ev) => el('div', {}, textoEvento(ev))) : [el('span', {}, 'Nenhuma alteração feita pelo portal ainda.')]))
       } catch (err) { historico.replaceChildren(aviso(err.message, 'erro')) }
     }
-    desenhar(); carregarHistorico(); dlg.showModal()
+
+    // ----- painel do Gestor+: licença, vencimento, chave, computadores e recuperação de acesso -----
+    async function acaoGestor(acao, dados, confirmacao, mensagem) {
+      if (confirmacao && !confirm(confirmacao)) return
+      resultado.className = 'msg'; resultado.textContent = 'Enviando…'
+      const botoes = c.querySelectorAll('button'); botoes.forEach((b) => (b.disabled = true))
+      try {
+        const m = motivo.value.trim()
+        const r = await chamar('chamar-sistema', { sistema: codigo, acao, empresa_id: atual.empresa_id, dados: { ...dados, ...(m ? { motivo: m } : {}) } })
+        if (r.assinatura) Object.assign(atual, { status: r.assinatura.status, plano_codigo: r.assinatura.plano_codigo, trial_ate: r.assinatura.trial_ate, liberada: r.assinatura.liberada })
+        const guardados = { motivo: motivo.value, dias: dias.value, plano: plano.value }
+        desenhar(); motivo.value = guardados.motivo; dias.value = guardados.dias; plano.value = guardados.plano
+        resultado.className = 'msg ok'; resultado.textContent = mensagem ? mensagem(r) : 'Alteração feita.'
+        aoMudar(); carregarHistorico(); carregarPainel()
+      } catch (err) {
+        botoes.forEach((b) => (b.disabled = false))
+        resultado.className = 'msg erro'; resultado.textContent = err.message
+      }
+    }
+    const erroLocal = (texto) => { resultado.className = 'msg erro'; resultado.textContent = texto }
+    const msgChave = (x) => (x.email && x.email.enviado ? 'Chave enviada por e-mail.' : x.email && x.email.motivo && x.email.motivo !== 'Envio não solicitado.' ? 'Chave pronta, mas o e-mail NÃO foi enviado: ' + x.email.motivo : 'Chave pronta.')
+    async function carregarPainel() {
+      if (!painel) return
+      try { desenharPainel(await chamar('chamar-sistema', { sistema: codigo, acao: 'licenca_ver', empresa_id: atual.empresa_id })) }
+      catch (err) { painel.replaceChildren(aviso(err.message, 'erro')) }
+    }
+    function desenharPainel(r) {
+      const s = r.situacao || {}, lic = r.licenca, maquinas = r.maquinas || []
+      const cls = (ROTULO_SITUACAO[s.estado] || [0, 'neutro'])[1]
+      const venc = el('input', { type: 'date', value: r.vencimento || '', 'aria-label': 'Vencimento' })
+      const limite = el('input', { type: 'number', min: 1, max: 1000, placeholder: 'segue o plano', 'aria-label': 'Limite de computadores', style: 'width:130px' })
+      const copiar = async () => {
+        try { await navigator.clipboard.writeText(lic.chave); resultado.className = 'msg ok'; resultado.textContent = 'Chave copiada.' } catch (_) { erroLocal('Não consegui copiar: selecione a chave e copie.') }
+      }
+      painel.replaceChildren(
+        el('div', { class: 'linha espaco' }, el('h3', {}, 'Gestor+ · licença'), el('span', { class: 'selo ' + cls }, textoSituacao(s.estado, s.dias))),
+        el('p', { class: 'dica' }, s.vencimento ? 'Vencimento: ' + dataBr(s.vencimento) + ` · carência de ${diasTxt(s.carencia_dias || 0)} depois do vencimento; aviso ${diasTxt(s.aviso_dias || 0)} antes.`
+          : atual.status === 'ativa' ? 'Sem vencimento definido: o acesso não vence.' : 'Sem data de vencimento.'),
+        atual.status === 'ativa' ? el('div', { class: 'linha' }, el('label', {}, 'Vencimento', venc),
+          el('button', { class: 'sec', onclick: () => (venc.value ? acaoGestor('vencimento_definir', { data: venc.value }) : erroLocal('Escolha a data do vencimento.')) }, 'Definir'),
+          el('button', { class: 'sec', onclick: () => acaoGestor('vencimento_definir', { meses: 1 }) }, '+1 mês'),
+          el('button', { class: 'sec', onclick: () => acaoGestor('vencimento_definir', { data: null }, 'Remover o vencimento? O acesso passa a não vencer.') }, 'Sem vencimento')) : null,
+        el('p', { class: 'dica' }, 'Com cobranças emitidas pelo portal, a cobrança em aberto manda no vencimento; sem elas vale a data acima.'),
+
+        el('h3', {}, 'Chave de licença'),
+        lic ? el('div', { class: 'linha' }, el('code', { style: 'font-size:1rem;font-weight:700;word-break:break-all' }, lic.chave),
+          el('span', { class: 'selo ' + (lic.status === 'ativa' ? 'ok' : 'erro') }, lic.status === 'ativa' ? 'Ativa' : 'Bloqueada')) : aviso('Esta empresa ainda não tem chave.', 'aviso'),
+        lic ? el('p', { class: 'dica' }, lic.email_enviado_em ? 'Enviada por e-mail em ' + dataHoraBr(lic.email_enviado_em) : 'Ainda não enviada por e-mail.') : null,
+        el('div', { class: 'linha' }, ...(lic ? [
+          el('button', { class: 'sec', onclick: copiar }, 'Copiar'),
+          el('button', { class: 'sec', onclick: () => acaoGestor('chave_reenviar', {}, `Enviar a chave para ${r.empresa.email || 'a empresa'}?`, msgChave) }, 'Enviar por e-mail'),
+          lic.status === 'ativa' ? el('button', { class: 'perigo', onclick: () => acaoGestor('chave_bloquear', {}, 'Bloquear a chave? O Gestor+ deste cliente deixa de validar.') }, 'Bloquear')
+            : el('button', { class: 'sec', onclick: () => acaoGestor('chave_desbloquear', {}) }, 'Desbloquear'),
+          el('button', { class: 'perigo', onclick: () => acaoGestor('chave_gerar', { substituir: true }, 'Gerar uma NOVA chave? A atual deixa de valer e os computadores precisam ativar de novo.', msgChave) }, 'Nova chave'),
+        ] : [
+          el('button', { onclick: () => acaoGestor('chave_gerar', { enviar: true }, `Gerar a chave e enviar para ${r.empresa.email || 'o e-mail da empresa'}?`, msgChave) }, 'Gerar e enviar por e-mail'),
+          el('button', { class: 'sec', onclick: () => acaoGestor('chave_gerar', {}, null, msgChave) }, 'Só gerar'),
+        ])),
+
+        el('h3', {}, `Computadores (${maquinas.length} de ${r.limite_computadores == null ? 'ilimitados' : r.limite_computadores})`),
+        ...(maquinas.length ? maquinas.map((m) => el('div', { class: 'linha espaco' },
+          el('span', { class: 'dica' }, `${m.nome || 'sem nome'} · versão ${m.versao || '?'} · ativado em ${dataBr(m.ativada_em)} · último contato ${m.ultimo_contato ? dataHoraBr(m.ultimo_contato) : '—'}`),
+          el('button', { class: 'sec', onclick: () => acaoGestor('maquina_liberar', { maquina: m.maquina }, `Liberar ${m.nome || 'este computador'}? Ele precisará ativar de novo com a chave.`) }, 'Liberar')))
+          : [el('span', { class: 'dica' }, 'Nenhum computador ativado ainda.')]),
+        el('div', { class: 'linha' }, el('label', {}, 'Limite de computadores (vazio = segue o plano)', limite),
+          el('button', { class: 'sec', onclick: () => acaoGestor('limite_definir', { limite: limite.value === '' ? null : Number(limite.value) }) }, 'Definir')),
+
+        el('h3', {}, 'Recuperação de acesso'),
+        el('p', { class: 'dica' }, 'Para quando o cliente esquece a senha do administrador do Gestor+: o código vale 24 horas e só pode ser usado uma vez.'),
+        el('div', { class: 'linha' }, el('button', { class: 'sec', disabled: !lic, onclick: () => acaoGestor('recuperacao_gerar', {}, 'Gerar um código de recuperação do administrador?', (x) => `Código: ${x.codigo} (válido até ${dataHoraBr(x.expira_em)})`) }, 'Gerar código')))
+    }
+    desenhar(); carregarHistorico(); carregarPainel(); dlg.showModal()
   }
 
   // ----- Status dos serviços (deste sistema) -----
@@ -353,7 +453,9 @@
       caixa.replaceChildren(...(lista.length ? lista.map((p) => el('button', { class: 'item', onclick: () => editarPlano(codigo, p, carregar) },
         el('div', { class: 'topo' }, el('strong', {}, p.nome), el('span', { class: 'selo ' + (p.ativo ? 'ok' : 'neutro') }, p.ativo ? 'Ativo' : 'Desativado')),
         el('div', { class: 'meta' }, el('span', {}, 'Código: ' + p.codigo), el('span', {}, moeda(p.preco_mensal) + '/mês'),
-          el('span', {}, 'Veículos: ' + (p.max_veiculos == null ? 'ilimitado' : p.max_veiculos)), el('span', {}, 'Usuários: ' + (p.max_usuarios == null ? 'ilimitado' : p.max_usuarios)),
+          ...(codigo === 'gestor'
+            ? [el('span', {}, 'Computadores: ' + (p.max_veiculos == null ? 'ilimitado' : p.max_veiculos))]
+            : [el('span', {}, 'Veículos: ' + (p.max_veiculos == null ? 'ilimitado' : p.max_veiculos)), el('span', {}, 'Usuários: ' + (p.max_usuarios == null ? 'ilimitado' : p.max_usuarios))]),
           el('span', {}, `${p.empresas} empresa(s) usando`)))) : [aviso('Nenhum plano criado ainda. Use "Novo plano" para criar os planos deste sistema.', 'aviso')]))
     }
     async function carregar() {
@@ -391,7 +493,8 @@
         dlg.close(); aoSalvar()
       } catch (e) { resultado.className = 'msg erro'; resultado.textContent = e.message; salvar.disabled = false } } },
       el('label', {}, 'Código (não muda depois)', f.codigo), el('label', {}, 'Nome do plano', f.nome),
-      el('div', { class: 'dois' }, el('label', {}, 'Máx. de veículos', f.veic), el('label', {}, 'Máx. de usuários', f.usu)),
+      codigo === 'gestor' ? el('label', {}, 'Máx. de computadores (vazio = ilimitado)', f.veic)
+        : el('div', { class: 'dois' }, el('label', {}, 'Máx. de veículos', f.veic), el('label', {}, 'Máx. de usuários', f.usu)),
       el('label', {}, 'Preço mensal (R$)', f.preco),
       el('label', { class: 'marca' }, f.ativo, 'Plano ativo (disponível para as empresas)'),
       el('div', { class: 'linha' }, salvar, el('button', { type: 'button', class: 'sec', onclick: () => dlg.close() }, 'Cancelar'),
